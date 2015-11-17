@@ -1,5 +1,5 @@
 /**
- * \file UserAnalysis.h
+ * \file DataOverlay.h
  *
  * 
  * \brief Little sample program for establishing a user analysis space.
@@ -14,19 +14,19 @@
 
 #include "TTree.h"
 
-namespace test{
-  class UserAnalysis;
+namespace mix{
+  class DataOverlay;
 }
 
-class test::UserAnalysis{
+class mix::DataOverlay{
   
 public:
   
   /// Default constructor
-  UserAnalysis();
+  DataOverlay();
 
   /// Default destructor
-  virtual ~UserAnalysis(){};
+  virtual ~DataOverlay(){};
 
   void RunAnalysis();
   void SetupOutputTree(TTree*);
