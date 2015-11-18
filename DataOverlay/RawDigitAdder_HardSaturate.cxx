@@ -6,14 +6,14 @@
 #include <stdexcept>
 #include <cmath>
 
-ovrly::RawDigitAdder_HardSaturate::RawDigitAdder_HardSaturate(bool t):
+mix::RawDigitAdder_HardSaturate::RawDigitAdder_HardSaturate(bool t):
   RawDigitAdder(t),
   _max(std::numeric_limits<short>::max()),
   _scale1(1),
   _scale2(1)
 {}
 
-void ovrly::RawDigitAdder_HardSaturate::SetSaturationPoint(short x)
+void mix::RawDigitAdder_HardSaturate::SetSaturationPoint(short x)
 {
   if(x<0){
     if(_throw)
@@ -23,7 +23,7 @@ void ovrly::RawDigitAdder_HardSaturate::SetSaturationPoint(short x)
   _max = x;
 }
 
-void ovrly::RawDigitAdder_HardSaturate::SetScaleInput(float f, float& _scale)
+void mix::RawDigitAdder_HardSaturate::SetScaleInput(float f, float& _scale)
 {
   if(f<0){
     if(_throw)
@@ -33,7 +33,7 @@ void ovrly::RawDigitAdder_HardSaturate::SetScaleInput(float f, float& _scale)
   _scale = f;
 }
 
-void ovrly::RawDigitAdder_HardSaturate::AddRawDigit(short const& d1, short const& d2, short& d_out)
+void mix::RawDigitAdder_HardSaturate::AddRawDigit(short const& d1, short const& d2, short& d_out)
 {
   d_out = (short)(std::round((float)d1 * _scale1)) + 
     (short)(std::round((float)d2 * _scale2));

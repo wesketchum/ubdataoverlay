@@ -26,11 +26,11 @@
    
 */
 
-namespace ovrly {
+namespace mix {
   class RawDigitAdder;
 }
 
-class ovrly::RawDigitAdder{
+class mix::RawDigitAdder{
 
 public:
 

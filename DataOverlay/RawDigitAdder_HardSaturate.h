@@ -27,11 +27,11 @@
    Allows for a scale factor to be applied to inputs: defaults to 1.
    
 */
-namespace ovrly {
+namespace mix {
   class RawDigitAdder_HardSaturate;
 }
 
-class ovrly::RawDigitAdder_HardSaturate : public ovrly::RawDigitAdder {
+class mix::RawDigitAdder_HardSaturate : public mix::RawDigitAdder {
 
 public:
 

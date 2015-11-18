@@ -3,19 +3,22 @@
 art_make(
 	  MODULE_LIBRARIES
 			ub_DataOverlay
+			ub_RawDigitAdder
 #			Geometry
 #	  	        Geometry_service
-#		        Utilities
+		        Utilities
 #	       	        TimeService_service
 #	                uboone_Geometry
 #                      OpticalDetectorData
 #			OpticalDetector
- #                     RawData
+                       RawData
 #			RecoBase
 #			Simulation
 #			SimulationBase
                         ${ART_FRAMEWORK_CORE}
 			${ART_FRAMEWORK_IO_SOURCES}
+			${ART_FRAMEWORK_IO_PRODUCTMIX}
+                        ${ART_FRAMEWORK_MODULES}
                         ${ART_FRAMEWORK_PRINCIPAL}
                         ${ART_FRAMEWORK_SERVICES_REGISTRY}
                         ${ART_FRAMEWORK_SERVICES_OPTIONAL}
@@ -23,6 +26,7 @@ art_make(
                         ${ART_PERSISTENCY_COMMON}
                         ${ART_PERSISTENCY_PROVENANCE}
                         ${ART_UTILITIES}
+                        ${BOOST_LIB}
                         ${MF_MESSAGELOGGER}
                         ${MF_UTILITIES}
                         ${FHICLCPP}
