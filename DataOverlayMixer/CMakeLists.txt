@@ -18,7 +18,8 @@ art_make(
                         ${ART_FRAMEWORK_CORE}
 			${ART_FRAMEWORK_IO_SOURCES}
 			${ART_FRAMEWORK_IO_PRODUCTMIX}
-                        ${ART_FRAMEWORK_MODULES}
+			${ART_FRAMEWORK_IO_ROOT}
+			${ART_FRAMEWORK_MODULES}
                         ${ART_FRAMEWORK_PRINCIPAL}
                         ${ART_FRAMEWORK_SERVICES_REGISTRY}
                         ${ART_FRAMEWORK_SERVICES_OPTIONAL}

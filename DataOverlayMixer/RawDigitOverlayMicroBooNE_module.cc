@@ -30,6 +30,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "DataOverlay/RawDigitAdder_HardSaturate.h"
 #include "RawData/RawDigit.h"
@@ -105,7 +106,7 @@ void mix::OverlayRawDataDetailMicroBooNE::finalizeEvent(art::Event& event) {
   //Nothing to be done?
 }
 
-bool MixRawDigits( std::vector< std::vector<raw::RawDigit> const* > const& inputs,
+bool mix::OverlayRawDataDetailMicroBooNE::MixRawDigits( std::vector< std::vector<raw::RawDigit> const* > const& inputs,
 		   std::vector<raw::RawDigit> & output,
 		   art::PtrRemapper const & remap) {
   if(inputs.size()!=2){
