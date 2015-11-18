@@ -4,7 +4,13 @@ art_make_library( LIBRARY_NAME  ub_DataOverlay
 	SOURCE DataOverlay.cxx
 	LIBRARIES
                  ${ROOT_BASIC_LIB_LIST}
+)
 
+art_make_library( LIBRARY_NAME  ub_RawDigitAdder
+	SOURCE RawDigitAdder.cxx
+	             RawDigitAdder_HardSaturate.cxx
+	LIBRARIES
+                 ${ROOT_BASIC_LIB_LIST}
 )
 
 install_headers()
