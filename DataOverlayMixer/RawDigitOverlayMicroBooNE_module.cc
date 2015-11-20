@@ -34,6 +34,7 @@
 
 #include "DataOverlay/RawDigitAdder_HardSaturate.h"
 #include "RawData/RawDigit.h"
+#include "SimpleTypesAndConstants/RawTypes.h"
 
 
 namespace mix {
@@ -62,9 +63,6 @@ public:
   bool MixRawDigits( std::vector< std::vector<raw::RawDigit> const* > const& inputs,
   		     std::vector<raw::RawDigit> & output,
   		     art::PtrRemapper const &);
-  //bool MixRawDigits( std::vector< std::vector<short> const* > const& inputs,
-  //		     std::vector<short> & output,
-  //		     art::PtrRemapper const &);
 
 private:
 
@@ -74,6 +72,8 @@ private:
   fhicl::ParameterSet  fpset;
   short                fDefaultRawDigitSatPoint;
   std::string          fRawDigitInputModuleLabel;
+
+  float SetMCScale(raw::ChannelID_t const& channel);
 };
 
 
@@ -106,36 +106,77 @@ void mix::OverlayRawDataDetailMicroBooNE::finalizeEvent(art::Event& event) {
   //Nothing to be done?
 }
 
+float mix::OverlayRawDataDetailMicroBooNE::SetMCScale(raw::ChannelID_t const& channel){
+
+  //note: we will put here access to the channel database to determine dead channels
+  if(channel>0) return 1.0;
+  return 0.0;
+
+}
+
 bool mix::OverlayRawDataDetailMicroBooNE::MixRawDigits( std::vector< std::vector<raw::RawDigit> const* > const& inputs,
-		   std::vector<raw::RawDigit> & output,
-		   art::PtrRemapper const & remap) {
+							std::vector<raw::RawDigit> & output,
+							art::PtrRemapper const & remap) {
+  
+  //make sure we only have two collections for now
   if(inputs.size()!=2){
     std::cout << "ERROR! We have more than two collections of raw digits we are adding!" << std::endl;
   }
-
+  
   std::vector<raw::RawDigit> const& col1(*inputs[0]);
   std::vector<raw::RawDigit> const& col2(*inputs[1]);
-
+  
+  //make sure collections have same size
   if(col1.size()!=col2.size()){
     std::cout << "ERROR! We have two collections that are not the same size!"
 	      << "\nThis isn't going to end well!" << std::endl;
   }
   
-  output.resize(col1.size());
+  //loop over the channels in the first collection
+  for(size_t i_ch=0; i_ch<col1.size(); i_ch++){
+    
+    //make sure we are adding the same channel
+    if( col1[i_ch].Channel() != col2[i_ch].Channel() ){
+      std::cout << "ERROR! Two collections don't have same channel order." << std::endl;
+    }
+
+    //make sure we aren't compressed
+    if( (col1[i_ch].Compression()==raw::Compress_t::kNone) ||
+	(col2[i_ch].Compression()==raw::Compress_t::kNone) ){
+      std::cout << "ERROR! We have a compressed object here." << std::endl;
+    }
+
+    //make sure our sample sizes are the same
+    if( col1[i_ch].Samples() != col2[i_ch].Samples() ){
+      std::cout << "ERROR! Two collections don't have same number of samples." << std::endl;
+    }
+
+    //initialize adc vector for output
+    std::vector<short> output_vec(col1[i_ch].Samples());
+
+    //Assume first one is data, so set scales to one.
+    fRDAdderAlg.SetScaleInputs(1.0,1.0);
+    fRDAdderAlg.AddRawDigits(col1[i_ch].ADCs(),output_vec);
+    
+    //Assume second one is MC, so set get the proper scale.
+    fRDAdderAlg.SetScaleInputs(SetMCScale(col2[i_ch].Channel()),1.0);
+    fRDAdderAlg.AddRawDigits(col2[i_ch].ADCs(),output_vec);
+
+    //now emplace back onto output collection...
+    output.emplace_back(col1[i_ch].Channel(),
+			col1[i_ch].Samples(),
+			output_vec);
+
+    //set pedestal and rms to be same as data (first collection)
+    output.back().SetPedestal(col1[i_ch].GetPedestal(),col1[i_ch].GetSigma());
+  }
+  
+  //check to make sure output size is same as input
+  if(output.size()!=col1.size()){
+    std::cout << "ERROR! Output collection size not the same as input!" << std::endl;
+  }
   
   return true;
-  
-  
-  //for(size_t i_rd=0
 }
 
-/*
-bool MixRawDigits( std::vector< std::vector<short> const* > const& inputs,
-		   std::vector<short> & output,
-		   art::PtrRemapper const & remap) {
-
-  output.resize(inputs.at(0)->size());
-  return true;
-}
-*/
 DEFINE_ART_MODULE(mix::OverlayRawDataMicroBooNE)
