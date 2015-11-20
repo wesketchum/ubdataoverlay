@@ -42,32 +42,45 @@ public:
   // Required functions.
   void analyze(art::Event const & e) override;
 
-  // Selected optional functions.
-  void reconfigure(fhicl::ParameterSet const & p) override;
-
 private:
 
-  // Declare member data here.
+  std::string                   fRawDigitModule1;
+  std::string                   fRawDigitModule2;
+  std::string                   fRawDigitModuleSum;
+  size_t                        fChannelSampleInterval;
+  std::vector<raw::ChannelID_t> fChannelsSpecial;  
+  bool                          fPrintBadOverlays;
+  std::string                   fInput1Label;
+  std::string                   fInput2Label;
+  std::string                   fSumLabel;
+
   mix::RawDigitAdderAna fAnaAlg;
   
+
 };
 
 
 mix::RawDigitOverlayMicroBooNEAna::RawDigitOverlayMicroBooNEAna(fhicl::ParameterSet const & p)
   :
-  EDAnalyzer(p)  // ,
- // More initializers here.
+  EDAnalyzer(p),
+  fRawDigitModule1(p.get<std::string>("RawDigitModule1")),
+  fRawDigitModule2(p.get<std::string>("RawDigitModule2")),
+  fRawDigitModuleSum(p.get<std::string>("RawDigitModuleSum")),
+  fChannelSampleInterval(p.get<size_t>("ChannelSampleInterval",100)),
+  fChannelsSpecial(p.get< std::vector<raw::ChannelID_t> >("ChannelsToPrint",std::vector<raw::ChannelID_t>())),
+  fPrintBadOverlays(p.get<bool>("PrintBadOverlays",true)),
+  fInput1Label(p.get<std::string>("Label1",fRawDigitModule1)),
+  fInput2Label(p.get<std::string>("Label2",fRawDigitModule2)),
+  fSumLabel(p.get<std::string>("LabelSum",fRawDigitModuleSum)),
+  fAnaAlg(fChannelSampleInterval,fChannelsSpecial,fPrintBadOverlays,fInput1Label,fInput2Label,fSumLabel)
 {
 }
 
 void mix::RawDigitOverlayMicroBooNEAna::analyze(art::Event const & e)
 {
   art::ServiceHandle<art::TFileService> tfs;
-}
 
-void mix::RawDigitOverlayMicroBooNEAna::reconfigure(fhicl::ParameterSet const & p)
-{
-  // Implementation of optional member function here.
+  
 }
 
 DEFINE_ART_MODULE(mix::RawDigitOverlayMicroBooNEAna)
