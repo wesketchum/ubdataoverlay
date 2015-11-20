@@ -3,7 +3,7 @@
 // Module Type: analyzer
 // File:        RawDigitOverlayMicroBooNEAna_module.cc
 //
-// Generated at Tue Nov 10 13:06:09 2015 by Wesley Ketchum using artmod
+// Generated at Nov 20 13:06:09 2015 by Wesley Ketchum using artmod
 // from cetpkgsupport v1_08_07.
 ////////////////////////////////////////////////////////////////////////
 
@@ -19,7 +19,8 @@
 
 #include "art/Framework/Services/Optional/TFileService.h"
 
-#include "TTree.h"
+#include "TH1S.h"
+#include <sstream>
 
 #include "DataOverlay/RawDigitAdderAna.hh"
 
@@ -63,9 +64,9 @@ private:
 mix::RawDigitOverlayMicroBooNEAna::RawDigitOverlayMicroBooNEAna(fhicl::ParameterSet const & p)
   :
   EDAnalyzer(p),
-  fRawDigitModule1(p.get<std::string>("RawDigitModule1")),
-  fRawDigitModule2(p.get<std::string>("RawDigitModule2")),
-  fRawDigitModuleSum(p.get<std::string>("RawDigitModuleSum")),
+  fRawDigitModule1(p.get<std::string>("RawDigitModule1Label")),
+  fRawDigitModule2(p.get<std::string>("RawDigitModule2Label")),
+  fRawDigitModuleSum(p.get<std::string>("RawDigitModuleSumLabel")),
   fChannelSampleInterval(p.get<size_t>("ChannelSampleInterval",100)),
   fChannelsSpecial(p.get< std::vector<raw::ChannelID_t> >("ChannelsToPrint",std::vector<raw::ChannelID_t>())),
   fPrintBadOverlays(p.get<bool>("PrintBadOverlays",true)),
@@ -80,7 +81,26 @@ void mix::RawDigitOverlayMicroBooNEAna::analyze(art::Event const & e)
 {
   art::ServiceHandle<art::TFileService> tfs;
 
+  art::Handle<std::vector<raw::RawDigit> > waveform1Handle,waveform2Handle,waveformSumHandle;
+  e.getByLabel(fRawDigitModule1,waveform1Handle);
+  e.getByLabel(fRawDigitModule2,waveform2Handle);
+  e.getByLabel(fRawDigitModuleSum,waveformSumHandle);
+  if(!waveform1Handle.isValid() || !waveform2Handle.isValid() || !waveformSumHandle.isValid()) throw std::exception();
+  std::vector<raw::RawDigit> const& waveform1Vector(*waveform1Handle); 
+  std::vector<raw::RawDigit> const& waveform2Vector(*waveform2Handle); 
+  std::vector<raw::RawDigit> const& waveformSumVector(*waveformSumHandle);
+
+  size_t histos_to_make = fAnaAlg.CheckOverlay(waveform1Vector,waveform2Vector,waveformSumVector);
+
+  std::vector<TH1S*> histograms(histos_to_make);
+  for(size_t i_h=0; i_h<histograms.size(); i_h++){
+    std::stringstream hname; hname << "h" << i_h;
+    tfs->make<TH1S>(hname.str().c_str(),"GenericTitle",1,0,1);
+  }
   
+  fAnaAlg.CreateOutputHistograms(histograms,
+				 waveform1Vector,waveform2Vector,waveformSumVector,
+				 e.run(),e.event());
 }
 
 DEFINE_ART_MODULE(mix::RawDigitOverlayMicroBooNEAna)
