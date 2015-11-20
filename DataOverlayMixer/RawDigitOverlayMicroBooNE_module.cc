@@ -22,12 +22,6 @@
 #include "fhiclcpp/ParameterSet.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
-//#ifndef BOOST_SYSTEM_NO_DEPRECATED
-//#define BOOST_SYSTEM_NO_DEPRECATED 1
-//#endif
-
-//#include "boost/noncopyable.hpp"
-
 #include <memory>
 #include <string>
 #include <vector>

@@ -4,17 +4,7 @@ art_make(
 	  MODULE_LIBRARIES
 			ub_DataOverlay
 			ub_RawDigitAdder
-#			Geometry
-#	  	        Geometry_service
-		        Utilities
-#	       	        TimeService_service
-#	                uboone_Geometry
-#                      OpticalDetectorData
-#			OpticalDetector
-                       RawData
-#			RecoBase
-#			Simulation
-#			SimulationBase
+                        RawData
                         ${ART_FRAMEWORK_CORE}
 			${ART_FRAMEWORK_IO_SOURCES}
 			${ART_FRAMEWORK_IO_PRODUCTMIX}
@@ -32,11 +22,7 @@ art_make(
                         ${MF_UTILITIES}
                         ${FHICLCPP}
                         ${CETLIB}
-                        ${ROOT_GEOM}
-                        ${ROOT_XMLIO}
-                        ${ROOT_GDML}
                         ${ROOT_BASIC_LIB_LIST}
-			${SIMULATIONBASE}
 )							   
 
 install_headers()
