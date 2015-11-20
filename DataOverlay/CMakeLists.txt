@@ -1,8 +1,9 @@
 # basic source code CMakeLists.txt
 
-art_make_library( LIBRARY_NAME  ub_DataOverlay
-	SOURCE DataOverlay.cxx
+art_make_library( LIBRARY_NAME  ub_RawDigitAdderAna
+	SOURCE RawDigitAdderAna.cxx
 	LIBRARIES
+                 RawData
                  ${ROOT_BASIC_LIB_LIST}
 )
 

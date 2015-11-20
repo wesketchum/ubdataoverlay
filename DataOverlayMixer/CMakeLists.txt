@@ -2,7 +2,7 @@
 
 art_make(
 	  MODULE_LIBRARIES
-			ub_DataOverlay
+			ub_RawDigitAdderAna
 			ub_RawDigitAdder
                         RawData
                         ${ART_FRAMEWORK_CORE}

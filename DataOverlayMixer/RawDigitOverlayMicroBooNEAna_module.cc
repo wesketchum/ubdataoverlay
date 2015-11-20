@@ -21,7 +21,7 @@
 
 #include "TTree.h"
 
-#include "DataOverlay/DataOverlay.hh"
+#include "DataOverlay/RawDigitAdderAna.hh"
 
 namespace mix {
   class RawDigitOverlayMicroBooNEAna;
@@ -48,7 +48,7 @@ public:
 private:
 
   // Declare member data here.
-  mix::DataOverlay fMyAnalysisObj;
+  mix::RawDigitAdderAna fAnaAlg;
   
 };
 
@@ -58,13 +58,11 @@ mix::RawDigitOverlayMicroBooNEAna::RawDigitOverlayMicroBooNEAna(fhicl::Parameter
   EDAnalyzer(p)  // ,
  // More initializers here.
 {
-  art::ServiceHandle<art::TFileService> tfs;
-  fMyAnalysisObj.SetupOutputTree(tfs->make<TTree>("myanatree","MyAnalysis Tree"));
 }
 
 void mix::RawDigitOverlayMicroBooNEAna::analyze(art::Event const & e)
 {
-  fMyAnalysisObj.RunAnalysis();
+  art::ServiceHandle<art::TFileService> tfs;
 }
 
 void mix::RawDigitOverlayMicroBooNEAna::reconfigure(fhicl::ParameterSet const & p)

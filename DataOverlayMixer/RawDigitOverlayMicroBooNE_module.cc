@@ -57,7 +57,13 @@ public:
   bool MixRawDigits( std::vector< std::vector<raw::RawDigit> const* > const& inputs,
   		     std::vector<raw::RawDigit> & output,
   		     art::PtrRemapper const &);
-
+  /*
+  //TODO: OpDetWaveform
+  bool MixOpDetWaveform( std::vector< std::vector<raw::OpDetWaveform> const* > const& inputs,
+                         std::vector<raw::OpDetWaveform> & output,
+			 art::PtrRemapper const &);
+  */
+  
 private:
 
   // Declare member data here.
