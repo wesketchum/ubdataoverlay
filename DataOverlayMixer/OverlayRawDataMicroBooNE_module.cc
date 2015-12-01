@@ -46,7 +46,7 @@ public:
   void startEvent(const art::Event&);  //called at the start of every event
   void finalizeEvent(art::Event &);    //called at the end of every event
   
-  size_t nSecondaries() { return 2; } //We ALWAYS here have just one event we use.
+  size_t nSecondaries() { return 1; } //We ALWAYS here have just one event we use.
 
   //void processEventIDs(art::EventIDSequence const& seq); //bookkepping for event IDs
 
@@ -149,7 +149,9 @@ bool mix::OverlayRawDataDetailMicroBooNE::MixRawDigits( std::vector< std::vector
     
     //make sure we are adding the same channel
     if( col1[i_ch].Channel() != col2[i_ch].Channel() ){
-      std::cout << "ERROR! Two collections don't have same channel order." << std::endl;
+      std::cout << "ERROR! Two collections don't have same channel order:\t"
+		<< col1[i_ch].Channel() << " " << col2[i_ch].Channel()
+		<< std::endl;
     }
 
     //make sure we aren't compressed
@@ -160,7 +162,7 @@ bool mix::OverlayRawDataDetailMicroBooNE::MixRawDigits( std::vector< std::vector
 
     //make sure our sample sizes are the same
     if( col1[i_ch].Samples() != col2[i_ch].Samples() ){
-      std::cout << "ERROR! Two collections don't have same number of samples." << std::endl;
+      std::cout << "ERROR! Two collections don't have same number of samples:\t" << col1[i_ch].Samples() << " " << col2[i_ch].Samples() << std::endl;
     }
 
     //initialize adc vector for output
