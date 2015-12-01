@@ -1,6 +1,6 @@
 # basic source code CMakeLists.txt
 
-art_make(
+art_make( BASENAME_ONLY
 	  MODULE_LIBRARIES
 			ub_RawDigitAdderAna
 			ub_RawDigitAdder

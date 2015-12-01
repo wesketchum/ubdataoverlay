@@ -46,6 +46,12 @@ public:
   void AddRawDigits( std::vector< std::vector<short> > const&,
 		     std::vector<short>&);
 
+  void SetPedestalFirstInput(float f1)  { SetPedestalInput(f1,_ped1); }
+  void SetPedestalSecondInput(float f2) { SetPedestalInput(f2,_ped2); }
+
+  void SetPedestalInputs(float f1, float f2)
+  { SetPedestalFirstInput(f1); SetPedestalSecondInput(f2); }
+
   virtual std::string Name() { return "RawDigitAdder_Base"; }
   
   /// Default destructor
@@ -62,6 +68,8 @@ public:
 
   void CheckVectorSize(std::vector<short> const&, std::vector<short> const&);
   
+  float _ped1,_ped2;
+  void SetPedestalInput(float f, float& _scale);
 
 };
 

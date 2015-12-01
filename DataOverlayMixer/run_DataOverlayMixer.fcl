@@ -1,6 +1,6 @@
 #include "services_microboone.fcl"
 
-process_name : UserAnalysis      #The process name must NOT contain any underscores
+process_name : RawDigitMixer      #The process name must NOT contain any underscores
 
 source : {
   module_type : RootInput
@@ -9,7 +9,7 @@ source : {
 
 services : {
 
-  TFileService: { fileName: "DataOverlayMixer.root" }
+  TFileService: { fileName: "DataOverlayMixer_hist.root" }
   Timing:       {}
   SimpleMemoryCheck:     { ignoreTotal: 1 }     #default is one
   RandomNumberGenerator: {}                     #ART native random number generator
@@ -36,39 +36,41 @@ services : {
 }
 
 outputs: {
-  optionalout: { module_type: RootOutput
-  	         fileName: "output_file.root"
-		 fastCloning: false }
+  out: { module_type: RootOutput
+  	         fileName: "DataOverlayMixer.root"
+		 fastCloning: false
+		 compressionLevel: 1 }
 }
 
 physics: {
 
   producers : {
-     # ParameterSets for zero or more producer modules
   }
   analyzers: {
      # ParameterSets for zero or more analyzer modules
-     userana: { module_type: DataOverlayMixer
-     	      	input_param: "optional" }
   }
 
   filters : {
-     # ParameterSets for zero or more filter modules
+  	    mixer: { module_type : OverlayRawDataMicroBooNE
+	    	     fileNames : [ " prod_pions_detsim.root" ]
+		     readMode : sequential
+		     wrapFiles : true
+		     coverageFraction : 1
+		     detail : {
+		       RawDigitInputModuleLabel : daq
+		     }
+		   }
   }
 
-  #path0 : [  comma separated list of module labels of producer or filter modules  ]
-  #path1 : [  comma separated list of module labels of producer or filter modules  ]
-
-  #path2 : [  comma separated list of module labels of analyzer or output modules  ]
-  #path3 : [  comma separated list of module labels of analyzer or output modules  ]
-
-  #trigger_paths: [ path0, path1 ]
-  #end_paths:     [ path2, path3 ]
+  # trigger_paths: [ path0, path1 ]
+  # end_paths:     [ path2, path3 ]
 
 
-  #here, just a shorthand: could have done ana: [ userana ] then end_paths: [ ana ]
-  ana1: [userana]
-  end_paths: [ ana1 ]
+  mixer_path : [ mixer ]
+  trigger_paths : [ mixer_path ]
+
+  # ana1: [userana]
+  output : [ out ]
+  end_paths: [ output ]
 
 }
-

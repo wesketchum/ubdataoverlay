@@ -25,6 +25,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <exception>
 
 #include "DataOverlay/RawDigitAdder_HardSaturate.h"
 #include "RawData/RawDigit.h"
@@ -45,7 +46,7 @@ public:
   void startEvent(const art::Event&);  //called at the start of every event
   void finalizeEvent(art::Event &);    //called at the end of every event
   
-  size_t nSecondaries() { return 1; } //We ALWAYS here have just one event we use.
+  size_t nSecondaries() { return 2; } //We ALWAYS here have just one event we use.
 
   //void processEventIDs(art::EventIDSequence const& seq); //bookkepping for event IDs
 
@@ -73,6 +74,8 @@ private:
   short                fDefaultRawDigitSatPoint;
   std::string          fRawDigitInputModuleLabel;
 
+  art::Handle< std::vector<raw::RawDigit> > dataDigitHandle;
+
   float SetMCScale(raw::ChannelID_t const& channel);
 };
 
@@ -98,6 +101,9 @@ void mix::OverlayRawDataDetailMicroBooNE::startEvent(const art::Event& event) {
 
   fRDAdderAlg.SetSaturationPoint(fDefaultRawDigitSatPoint);
   fRDAdderAlg.SetScaleInputs(1.0,1.0);
+
+  event.getByLabel(fRawDigitInputModuleLabel,dataDigitHandle);
+  if(!dataDigitHandle.isValid()) throw std::exception();
   
 }
 
@@ -118,13 +124,19 @@ bool mix::OverlayRawDataDetailMicroBooNE::MixRawDigits( std::vector< std::vector
 							std::vector<raw::RawDigit> & output,
 							art::PtrRemapper const & remap) {
   
+  //if(inputs.size()<2) return false;
+
   //make sure we only have two collections for now
-  if(inputs.size()!=2){
-    std::cout << "ERROR! We have more than two collections of raw digits we are adding!" << std::endl;
+  if(inputs.size()!=1){
+    std::cout << "ERROR! We have more than two collections of raw digits we are adding! " << inputs.size() << std::endl;
   }
   
-  std::vector<raw::RawDigit> const& col1(*inputs[0]);
-  std::vector<raw::RawDigit> const& col2(*inputs[1]);
+  //std::vector<raw::RawDigit> const& col1(*inputs[0]);
+  //std::vector<raw::RawDigit> const& col2(*inputs[1]);
+
+  std::vector<raw::RawDigit> const& col1(*dataDigitHandle);
+  std::vector<raw::RawDigit> const& col2(*inputs[0]);
+
   
   //make sure collections have same size
   if(col1.size()!=col2.size()){
@@ -141,8 +153,8 @@ bool mix::OverlayRawDataDetailMicroBooNE::MixRawDigits( std::vector< std::vector
     }
 
     //make sure we aren't compressed
-    if( (col1[i_ch].Compression()==raw::Compress_t::kNone) ||
-	(col2[i_ch].Compression()==raw::Compress_t::kNone) ){
+    if( (col1[i_ch].Compression()!=raw::Compress_t::kNone) ||
+	(col2[i_ch].Compression()!=raw::Compress_t::kNone) ){
       std::cout << "ERROR! We have a compressed object here." << std::endl;
     }
 
@@ -156,10 +168,12 @@ bool mix::OverlayRawDataDetailMicroBooNE::MixRawDigits( std::vector< std::vector
 
     //Assume first one is data, so set scales to one.
     fRDAdderAlg.SetScaleInputs(1.0,1.0);
+    fRDAdderAlg.SetPedestalInputs(0.0,0.0);
     fRDAdderAlg.AddRawDigits(col1[i_ch].ADCs(),output_vec);
     
     //Assume second one is MC, so set get the proper scale.
     fRDAdderAlg.SetScaleInputs(SetMCScale(col2[i_ch].Channel()),1.0);
+    fRDAdderAlg.SetPedestalInputs(col2[i_ch].GetPedestal(),0.0);
     fRDAdderAlg.AddRawDigits(col2[i_ch].ADCs(),output_vec);
 
     //now emplace back onto output collection...

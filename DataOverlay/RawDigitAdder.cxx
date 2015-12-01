@@ -12,7 +12,7 @@ void mix::RawDigitAdder::AddRawDigits( std::vector<short> const& inputVec1,
   CheckVectorSize(inputVec1,inputVec2);
   outputVec.clear(); outputVec.resize(inputVec1.size());
   for(size_t i=0; i<inputVec1.size(); i++)
-    AddRawDigit(inputVec1[i],inputVec2[i],outputVec[i]);
+    AddRawDigit(inputVec1[i]-(short)_ped1,inputVec2[i]-(short)_ped2,outputVec[i]);
 }
 
 void mix::RawDigitAdder::AddRawDigits( std::vector<short> const& inputVec1,
@@ -20,7 +20,7 @@ void mix::RawDigitAdder::AddRawDigits( std::vector<short> const& inputVec1,
 {
   CheckVectorSize(inputVec1,inputVec2);
   for(size_t i=0; i<inputVec1.size(); i++)
-    AddRawDigit(inputVec1[i],inputVec2[i]);
+    AddRawDigit(inputVec1[i]-(short)_ped1,inputVec2[i]-(short)_ped2,inputVec2[i]);
 }
 
 void mix::RawDigitAdder::AddRawDigits( std::vector< std::vector<short> > const& inputVecList,
@@ -67,4 +67,11 @@ void mix::RawDigitAdder::FixOverflow(short& d)
   if(d<0)
     d = std::numeric_limits<short>::max();
 }
+
+
+void mix::RawDigitAdder::SetPedestalInput(float f, float& _ped)
+{
+  _ped = f;
+}
+
 #endif
