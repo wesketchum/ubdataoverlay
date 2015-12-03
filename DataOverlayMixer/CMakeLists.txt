@@ -3,7 +3,7 @@
 art_make( BASENAME_ONLY
 	  MODULE_LIBRARIES
 			ub_RawDigitAdderAna
-			ub_RawDigitAdder
+			ub_RawDigitMixer
                         RawData
                         ${ART_FRAMEWORK_CORE}
 			${ART_FRAMEWORK_IO_SOURCES}

@@ -25,9 +25,12 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <exception>
+#include <sstream>
 
-#include "DataOverlay/RawDigitAdder_HardSaturate.h"
+
+#include "DataOverlay/RawDigitMixer.h"
 #include "RawData/RawDigit.h"
 #include "SimpleTypesAndConstants/RawTypes.h"
 
@@ -46,7 +49,7 @@ public:
   void startEvent(const art::Event&);  //called at the start of every event
   void finalizeEvent(art::Event &);    //called at the end of every event
   
-  size_t nSecondaries() { return 1; } //We ALWAYS here have just one event we use.
+  size_t nSecondaries() { return fEventsToMix; } 
 
   //void processEventIDs(art::EventIDSequence const& seq); //bookkepping for event IDs
 
@@ -68,25 +71,30 @@ public:
 private:
 
   // Declare member data here.
-  RawDigitAdder_HardSaturate fRDAdderAlg;
-
+  RawDigitMixer              fRDMixer;
+  
   fhicl::ParameterSet  fpset;
   short                fDefaultRawDigitSatPoint;
   std::string          fRawDigitInputModuleLabel;
-
+  size_t               fEventsToMix;
+  float                fDefaultMCScale;
+  
   art::Handle< std::vector<raw::RawDigit> > dataDigitHandle;
 
-  float SetMCScale(raw::ChannelID_t const& channel);
+  void GenerateMCScaleMap();
+  std::unordered_map<raw::ChannelID_t,float> fMCScaleMap;
 };
 
 
 mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::ParameterSet const& p,
 								    art::MixHelper &helper)
   :
-  fRDAdderAlg(true),
+  fRDMixer(false),
   fpset(p.get<fhicl::ParameterSet>("detail")),
   fDefaultRawDigitSatPoint(fpset.get<short>("DefaultRawDigitSaturationPoint",4096)),
-  fRawDigitInputModuleLabel(fpset.get<std::string>("RawDigitInputModuleLabel"))
+  fRawDigitInputModuleLabel(fpset.get<std::string>("RawDigitInputModuleLabel")),
+  fEventsToMix(fpset.get<size_t>("EventsToMix",1)),
+  fDefaultMCScale(fpset.get<float>("DefaultMCScale",1))
 {
   //If it produces something on its own, declare it here
   //helper.produces<>();
@@ -99,12 +107,11 @@ mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::Param
 //Initialize for each event
 void mix::OverlayRawDataDetailMicroBooNE::startEvent(const art::Event& event) {
 
-  fRDAdderAlg.SetSaturationPoint(fDefaultRawDigitSatPoint);
-  fRDAdderAlg.SetScaleInputs(1.0,1.0);
-
   event.getByLabel(fRawDigitInputModuleLabel,dataDigitHandle);
   if(!dataDigitHandle.isValid()) throw std::exception();
   
+  fRDMixer.SetSaturationPoint(fDefaultRawDigitSatPoint);
+  GenerateMCScaleMap();
 }
 
 //End each event
@@ -112,84 +119,38 @@ void mix::OverlayRawDataDetailMicroBooNE::finalizeEvent(art::Event& event) {
   //Nothing to be done?
 }
 
-float mix::OverlayRawDataDetailMicroBooNE::SetMCScale(raw::ChannelID_t const& channel){
-
+void mix::OverlayRawDataDetailMicroBooNE::GenerateMCScaleMap(){
+  //right now, assume the number of channels is the number in the collection
+  //and, loop through the channels one by one to get the right channel number
   //note: we will put here access to the channel database to determine dead channels
-  if(channel>0) return 1.0;
-  return 0.0;
-
+  for(auto const& d : *dataDigitHandle)
+    fMCScaleMap[d.Channel()] = fDefaultMCScale;
 }
 
 bool mix::OverlayRawDataDetailMicroBooNE::MixRawDigits( std::vector< std::vector<raw::RawDigit> const* > const& inputs,
 							std::vector<raw::RawDigit> & output,
 							art::PtrRemapper const & remap) {
   
-  //if(inputs.size()<2) return false;
-
   //make sure we only have two collections for now
-  if(inputs.size()!=1){
-    std::cout << "ERROR! We have more than two collections of raw digits we are adding! " << inputs.size() << std::endl;
+  if(inputs.size()!=fEventsToMix){
+    std::stringstream err_str;
+    err_str << "ERROR! We have more the wrong number of collections of raw digits we are adding! " << inputs.size();
+    throw std::runtime_error(err_str.str());
   }
+
+  fRDMixer.DeclareData(*dataDigitHandle);
+  for(auto const& icol : inputs)
+    fRDMixer.Mix(*icol,fMCScaleMap);
+
+
+  fRDMixer.FillRawDigitOutput(output);
   
-  //std::vector<raw::RawDigit> const& col1(*inputs[0]);
-  //std::vector<raw::RawDigit> const& col2(*inputs[1]);
-
-  std::vector<raw::RawDigit> const& col1(*dataDigitHandle);
-  std::vector<raw::RawDigit> const& col2(*inputs[0]);
-
-  
-  //make sure collections have same size
-  if(col1.size()!=col2.size()){
-    std::cout << "ERROR! We have two collections that are not the same size!"
-	      << "\nThis isn't going to end well!" << std::endl;
-  }
-  
-  //loop over the channels in the first collection
-  for(size_t i_ch=0; i_ch<col1.size(); i_ch++){
-    
-    //make sure we are adding the same channel
-    if( col1[i_ch].Channel() != col2[i_ch].Channel() ){
-      std::cout << "ERROR! Two collections don't have same channel order:\t"
-		<< col1[i_ch].Channel() << " " << col2[i_ch].Channel()
-		<< std::endl;
-    }
-
-    //make sure we aren't compressed
-    if( (col1[i_ch].Compression()!=raw::Compress_t::kNone) ||
-	(col2[i_ch].Compression()!=raw::Compress_t::kNone) ){
-      std::cout << "ERROR! We have a compressed object here." << std::endl;
-    }
-
-    //make sure our sample sizes are the same
-    if( col1[i_ch].Samples() != col2[i_ch].Samples() ){
-      std::cout << "ERROR! Two collections don't have same number of samples:\t" << col1[i_ch].Samples() << " " << col2[i_ch].Samples() << std::endl;
-    }
-
-    //initialize adc vector for output
-    std::vector<short> output_vec(col1[i_ch].Samples());
-
-    //Assume first one is data, so set scales to one.
-    fRDAdderAlg.SetScaleInputs(1.0,1.0);
-    fRDAdderAlg.SetPedestalInputs(0.0,0.0);
-    fRDAdderAlg.AddRawDigits(col1[i_ch].ADCs(),output_vec);
-    
-    //Assume second one is MC, so set get the proper scale.
-    fRDAdderAlg.SetScaleInputs(SetMCScale(col2[i_ch].Channel()),1.0);
-    fRDAdderAlg.SetPedestalInputs(col2[i_ch].GetPedestal(),0.0);
-    fRDAdderAlg.AddRawDigits(col2[i_ch].ADCs(),output_vec);
-
-    //now emplace back onto output collection...
-    output.emplace_back(col1[i_ch].Channel(),
-			col1[i_ch].Samples(),
-			output_vec);
-
-    //set pedestal and rms to be same as data (first collection)
-    output.back().SetPedestal(col1[i_ch].GetPedestal(),col1[i_ch].GetSigma());
-  }
   
   //check to make sure output size is same as input
-  if(output.size()!=col1.size()){
-    std::cout << "ERROR! Output collection size not the same as input!" << std::endl;
+  if(output.size()!=dataDigitHandle->size()){
+    std::stringstream err_str;
+    err_str << "ERROR! Output collection size not the same as input!" << std::endl;
+    throw std::runtime_error(err_str.str());
   }
   
   return true;

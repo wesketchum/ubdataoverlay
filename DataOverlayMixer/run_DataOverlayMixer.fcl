@@ -58,6 +58,8 @@ physics: {
 		     coverageFraction : 1
 		     detail : {
 		       RawDigitInputModuleLabel : daq
+		       EventsToMix: 1
+		       DefaultMCScale: 1.0
 		     }
 		   }
   }

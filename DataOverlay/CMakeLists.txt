@@ -14,5 +14,12 @@ art_make_library( LIBRARY_NAME  ub_RawDigitAdder
                  ${ROOT_BASIC_LIB_LIST}
 )
 
-install_headers()
+art_make_library( LIBRARY_NAME  ub_RawDigitMixer
+	SOURCE RawDigitMixer.cxx
+	LIBRARIES
+		ub_RawDigitAdder
+		RawData
+		${ROOT_BASIC_LIB_LIST}
+)
+ install_headers()
 install_source()
