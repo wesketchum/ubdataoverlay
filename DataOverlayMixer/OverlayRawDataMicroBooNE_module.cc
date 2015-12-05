@@ -29,6 +29,7 @@
 #include <exception>
 #include <sstream>
 
+#include "SimulationBase/MCTruth.h"
 
 #include "DataOverlay/RawDigitMixer.h"
 #include "RawData/RawDigit.h"
@@ -58,6 +59,13 @@ public:
   // For now, allow exactly one  input. Assume MC inputs have been merged
   // previously and one detsim output created if needed. This could be changed
   // but would require mixing functions for MC here.
+
+  //a lot of MC collections are just simple copies of the collections...
+  template<typename T>
+  bool MixSimpleCopy( std::vector< std::vector<T> const*> const& inputs,
+		      std::vector< T > & output,
+		      art::PtrRemapper const &);
+  
   bool MixRawDigits( std::vector< std::vector<raw::RawDigit> const* > const& inputs,
   		     std::vector<raw::RawDigit> & output,
   		     art::PtrRemapper const &);
@@ -67,6 +75,8 @@ public:
                          std::vector<raw::OpDetWaveform> & output,
 			 art::PtrRemapper const &);
   */
+
+		   
   
 private:
 
@@ -76,6 +86,8 @@ private:
   fhicl::ParameterSet  fpset;
   short                fDefaultRawDigitSatPoint;
   std::string          fRawDigitInputModuleLabel;
+  std::string          fG4InputModuleLabel;
+  std::string          fGeneratorInputModuleLabel;
   size_t               fEventsToMix;
   float                fDefaultMCScale;
   
@@ -93,12 +105,27 @@ mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::Param
   fpset(p.get<fhicl::ParameterSet>("detail")),
   fDefaultRawDigitSatPoint(fpset.get<short>("DefaultRawDigitSaturationPoint",4096)),
   fRawDigitInputModuleLabel(fpset.get<std::string>("RawDigitInputModuleLabel")),
+  fG4InputModuleLabel(fpset.get<std::string>("G4InputModuleLabel")),
+  fGeneratorInputModuleLabel(fpset.get<std::string>("GeneratorInputModuleLabel")),
   fEventsToMix(fpset.get<size_t>("EventsToMix",1)),
   fDefaultMCScale(fpset.get<float>("DefaultMCScale",1))
 {
-  //If it produces something on its own, declare it here
+
+  if(fEventsToMix!=1){
+    std::stringstream err_str;
+    err_str << "ERROR! Really sorry, but we can only do mixing for one collection right now! ";
+    err_str << "\nYep. We're gonna throw an exception now. You should change your fcl to set 'EventsToMix' to 1";
+    throw std::runtime_error(err_str.str());
+  }
+
+    //If it produces something on its own, declare it here
   //helper.produces<>();
 
+
+  helper.declareMixOp( art::InputTag(fGeneratorInputModuleLabel),
+		       &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<simb::MCTruth>,
+		       *this );
+  
   helper.declareMixOp( art::InputTag(fRawDigitInputModuleLabel),
   		       &OverlayRawDataDetailMicroBooNE::MixRawDigits,
   		       *this );
@@ -125,6 +152,14 @@ void mix::OverlayRawDataDetailMicroBooNE::GenerateMCScaleMap(){
   //note: we will put here access to the channel database to determine dead channels
   for(auto const& d : *dataDigitHandle)
     fMCScaleMap[d.Channel()] = fDefaultMCScale;
+}
+
+template<typename T>
+bool mix::OverlayRawDataDetailMicroBooNE::MixSimpleCopy( std::vector< std::vector<T> const*> const& inputs,
+							 std::vector< T > & output,
+							 art::PtrRemapper const &){
+  art::flattenCollections(inputs,output);
+  return true;
 }
 
 bool mix::OverlayRawDataDetailMicroBooNE::MixRawDigits( std::vector< std::vector<raw::RawDigit> const* > const& inputs,
