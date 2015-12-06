@@ -3,6 +3,8 @@
 art_make( BASENAME_ONLY
 	  MODULE_LIBRARIES
 			SimulationBase
+			Simulation
+			MCBase
 			ub_RawDigitAdderAna
 			ub_RawDigitMixer
                         RawData

@@ -30,6 +30,14 @@
 #include <sstream>
 
 #include "SimulationBase/MCTruth.h"
+#include "SimulationBase/MCParticle.h"
+
+#include "Simulation/SimChannel.h"
+#include "Simulation/SimPhotons.h"
+#include "Simulation/AuxDetSimChannel.h"
+
+#include "MCBase/MCTrack.h"
+#include "MCBase/MCShower.h"
 
 #include "DataOverlay/RawDigitMixer.h"
 #include "RawData/RawDigit.h"
@@ -88,6 +96,8 @@ private:
   std::string          fRawDigitInputModuleLabel;
   std::string          fG4InputModuleLabel;
   std::string          fGeneratorInputModuleLabel;
+  bool                 fDoMCReco;
+  std::string          fMCRecoInputModuleLabel;
   size_t               fEventsToMix;
   float                fDefaultMCScale;
   
@@ -110,6 +120,8 @@ mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::Param
   fEventsToMix(fpset.get<size_t>("EventsToMix",1)),
   fDefaultMCScale(fpset.get<float>("DefaultMCScale",1))
 {
+  
+  fDoMCReco = fpset.get_if_present<std::string>("MCRecoInputModuleLabel",fMCRecoInputModuleLabel);
 
   if(fEventsToMix!=1){
     std::stringstream err_str;
@@ -121,10 +133,40 @@ mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::Param
     //If it produces something on its own, declare it here
   //helper.produces<>();
 
-
+  //MC generator info is a simple copy
   helper.declareMixOp( art::InputTag(fGeneratorInputModuleLabel),
 		       &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<simb::MCTruth>,
 		       *this );
+  
+  //Simple copies of G4 SimPhotons, MCParticles, SimChannels, and SimAuxDetChannel
+  helper.declareMixOp( art::InputTag(fG4InputModuleLabel),
+		       &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<simb::MCParticle>,
+		       *this );
+  helper.declareMixOp( art::InputTag(fG4InputModuleLabel),
+		       &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<sim::SimPhotons>,
+		       *this );
+  helper.declareMixOp( art::InputTag(fG4InputModuleLabel),
+		       &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<sim::SimChannel>,
+		       *this );
+  helper.declareMixOp( art::InputTag(fG4InputModuleLabel),
+		       &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<sim::AuxDetSimChannel>,
+		       *this );
+  /*
+  //Associations of MCParticles to MCTruth...hopefully a simple copy is enough
+  helper.declareMixOp( art::InputTag(fG4InputModuleLabel),
+		       &OverlayRawDataDetailMicroBooNE::MixSimpleCopy
+		       < art::Assns<simb::MCTruth,simb::MCParticle,void> >,
+		       *this );
+		       */
+  //Copies of MCShower and MCTrack
+  if(fDoMCReco){
+    helper.declareMixOp( art::InputTag(fMCRecoInputModuleLabel),
+			 &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<sim::MCShower>,
+			 *this );
+    helper.declareMixOp( art::InputTag(fMCRecoInputModuleLabel),
+			 &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<sim::MCTrack>,
+			 *this );
+  }
   
   helper.declareMixOp( art::InputTag(fRawDigitInputModuleLabel),
   		       &OverlayRawDataDetailMicroBooNE::MixRawDigits,
