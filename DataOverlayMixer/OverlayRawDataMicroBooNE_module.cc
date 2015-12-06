@@ -93,6 +93,7 @@ private:
   
   fhicl::ParameterSet  fpset;
   short                fDefaultRawDigitSatPoint;
+  bool                 fInputFileIsData;
   std::string          fRawDigitInputModuleLabel;
   std::string          fG4InputModuleLabel;
   std::string          fGeneratorInputModuleLabel;
@@ -101,9 +102,9 @@ private:
   size_t               fEventsToMix;
   float                fDefaultMCScale;
   
-  art::Handle< std::vector<raw::RawDigit> > dataDigitHandle;
+  art::Handle< std::vector<raw::RawDigit> > inputDigitHandle;
 
-  void GenerateMCScaleMap();
+  void GenerateMCScaleMap(std::vector<raw::RawDigit> const&);
   std::unordered_map<raw::ChannelID_t,float> fMCScaleMap;
 };
 
@@ -114,15 +115,12 @@ mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::Param
   fRDMixer(false),
   fpset(p.get<fhicl::ParameterSet>("detail")),
   fDefaultRawDigitSatPoint(fpset.get<short>("DefaultRawDigitSaturationPoint",4096)),
+  fInputFileIsData(fpset.get<bool>("InputFileIsData")),
   fRawDigitInputModuleLabel(fpset.get<std::string>("RawDigitInputModuleLabel")),
-  fG4InputModuleLabel(fpset.get<std::string>("G4InputModuleLabel")),
-  fGeneratorInputModuleLabel(fpset.get<std::string>("GeneratorInputModuleLabel")),
   fEventsToMix(fpset.get<size_t>("EventsToMix",1)),
   fDefaultMCScale(fpset.get<float>("DefaultMCScale",1))
 {
   
-  fDoMCReco = fpset.get_if_present<std::string>("MCRecoInputModuleLabel",fMCRecoInputModuleLabel);
-
   if(fEventsToMix!=1){
     std::stringstream err_str;
     err_str << "ERROR! Really sorry, but we can only do mixing for one collection right now! ";
@@ -130,42 +128,48 @@ mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::Param
     throw std::runtime_error(err_str.str());
   }
 
-    //If it produces something on its own, declare it here
-  //helper.produces<>();
+  if(fInputFileIsData){
+    fDoMCReco = fpset.get_if_present<std::string>("MCRecoInputModuleLabel",fMCRecoInputModuleLabel);
+    fG4InputModuleLabel = fpset.get<std::string>("G4InputModuleLabel");
+    fGeneratorInputModuleLabel = fpset.get<std::string>("GeneratorInputModuleLabel");
 
-  //MC generator info is a simple copy
-  helper.declareMixOp( art::InputTag(fGeneratorInputModuleLabel),
-		       &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<simb::MCTruth>,
-		       *this );
-  
-  //Simple copies of G4 SimPhotons, MCParticles, SimChannels, and SimAuxDetChannel
-  helper.declareMixOp( art::InputTag(fG4InputModuleLabel),
-		       &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<simb::MCParticle>,
-		       *this );
-  helper.declareMixOp( art::InputTag(fG4InputModuleLabel),
-		       &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<sim::SimPhotons>,
-		       *this );
-  helper.declareMixOp( art::InputTag(fG4InputModuleLabel),
-		       &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<sim::SimChannel>,
-		       *this );
-  helper.declareMixOp( art::InputTag(fG4InputModuleLabel),
-		       &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<sim::AuxDetSimChannel>,
-		       *this );
-  /*
-  //Associations of MCParticles to MCTruth...hopefully a simple copy is enough
-  helper.declareMixOp( art::InputTag(fG4InputModuleLabel),
-		       &OverlayRawDataDetailMicroBooNE::MixSimpleCopy
+    //If it produces something on its own, declare it here
+    //helper.produces<>();
+    
+    //MC generator info is a simple copy
+    helper.declareMixOp( art::InputTag(fGeneratorInputModuleLabel),
+			 &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<simb::MCTruth>,
+			 *this );
+    
+    //Simple copies of G4 SimPhotons, MCParticles, SimChannels, and SimAuxDetChannel
+    helper.declareMixOp( art::InputTag(fG4InputModuleLabel),
+			 &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<simb::MCParticle>,
+			 *this );
+    helper.declareMixOp( art::InputTag(fG4InputModuleLabel),
+			 &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<sim::SimPhotons>,
+			 *this );
+    helper.declareMixOp( art::InputTag(fG4InputModuleLabel),
+			 &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<sim::SimChannel>,
+			 *this );
+    helper.declareMixOp( art::InputTag(fG4InputModuleLabel),
+			 &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<sim::AuxDetSimChannel>,
+			 *this );
+    /*
+    //Associations of MCParticles to MCTruth...hopefully a simple copy is enough
+    helper.declareMixOp( art::InputTag(fG4InputModuleLabel),
+    &OverlayRawDataDetailMicroBooNE::MixSimpleCopy
 		       < art::Assns<simb::MCTruth,simb::MCParticle,void> >,
 		       *this );
 		       */
-  //Copies of MCShower and MCTrack
-  if(fDoMCReco){
-    helper.declareMixOp( art::InputTag(fMCRecoInputModuleLabel),
+    //Copies of MCShower and MCTrack
+    if(fDoMCReco){
+      helper.declareMixOp( art::InputTag(fMCRecoInputModuleLabel),
 			 &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<sim::MCShower>,
-			 *this );
-    helper.declareMixOp( art::InputTag(fMCRecoInputModuleLabel),
-			 &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<sim::MCTrack>,
-			 *this );
+			   *this );
+      helper.declareMixOp( art::InputTag(fMCRecoInputModuleLabel),
+			   &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<sim::MCTrack>,
+			   *this );
+    }
   }
   
   helper.declareMixOp( art::InputTag(fRawDigitInputModuleLabel),
@@ -176,11 +180,10 @@ mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::Param
 //Initialize for each event
 void mix::OverlayRawDataDetailMicroBooNE::startEvent(const art::Event& event) {
 
-  event.getByLabel(fRawDigitInputModuleLabel,dataDigitHandle);
-  if(!dataDigitHandle.isValid()) throw std::exception();
+  event.getByLabel(fRawDigitInputModuleLabel,inputDigitHandle);
+  if(!inputDigitHandle.isValid()) throw std::exception();
   
   fRDMixer.SetSaturationPoint(fDefaultRawDigitSatPoint);
-  GenerateMCScaleMap();
 }
 
 //End each event
@@ -188,11 +191,11 @@ void mix::OverlayRawDataDetailMicroBooNE::finalizeEvent(art::Event& event) {
   //Nothing to be done?
 }
 
-void mix::OverlayRawDataDetailMicroBooNE::GenerateMCScaleMap(){
+void mix::OverlayRawDataDetailMicroBooNE::GenerateMCScaleMap(std::vector<raw::RawDigit> const& dataDigitVector){
   //right now, assume the number of channels is the number in the collection
   //and, loop through the channels one by one to get the right channel number
   //note: we will put here access to the channel database to determine dead channels
-  for(auto const& d : *dataDigitHandle)
+  for(auto const& d : dataDigitVector)
     fMCScaleMap[d.Channel()] = fDefaultMCScale;
 }
 
@@ -209,26 +212,26 @@ bool mix::OverlayRawDataDetailMicroBooNE::MixRawDigits( std::vector< std::vector
 							art::PtrRemapper const & remap) {
   
   //make sure we only have two collections for now
-  if(inputs.size()!=fEventsToMix){
+  if(inputs.size()!=fEventsToMix || (inputs.size()!=1 && !fInputFileIsData)){
     std::stringstream err_str;
     err_str << "ERROR! We have more the wrong number of collections of raw digits we are adding! " << inputs.size();
     throw std::runtime_error(err_str.str());
   }
 
-  fRDMixer.DeclareData(*dataDigitHandle);
-  for(auto const& icol : inputs)
-    fRDMixer.Mix(*icol,fMCScaleMap);
 
-
-  fRDMixer.FillRawDigitOutput(output);
-  
-  
-  //check to make sure output size is same as input
-  if(output.size()!=dataDigitHandle->size()){
-    std::stringstream err_str;
-    err_str << "ERROR! Output collection size not the same as input!" << std::endl;
-    throw std::runtime_error(err_str.str());
+  if(fInputFileIsData){
+    GenerateMCScaleMap(*inputDigitHandle);  
+    fRDMixer.DeclareData(*inputDigitHandle);
+    for(auto const& icol : inputs)
+      fRDMixer.Mix(*icol,fMCScaleMap);
   }
+  else if(!fInputFileIsData){
+    GenerateMCScaleMap(*(inputs[0]));  
+    fRDMixer.DeclareData(*(inputs[0]));
+    fRDMixer.Mix(*inputDigitHandle,fMCScaleMap);
+  }
+  
+  fRDMixer.FillRawDigitOutput(output);
   
   return true;
 }
