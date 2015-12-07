@@ -46,6 +46,7 @@
 #include "DataOverlay/OpDetWaveformMixer.h"
 #include "RawData/OpDetWaveform.h"
 
+#include "DataOverlayProducts/EventMixingSummary.h"
 
 namespace mix {
   class OverlayRawDataDetailMicroBooNE;
@@ -63,7 +64,7 @@ public:
   
   size_t nSecondaries() { return fEventsToMix; } 
 
-  //void processEventIDs(art::EventIDSequence const& seq); //bookkepping for event IDs
+  void processEventIDs(art::EventIDSequence const& seq); //bookkepping for event IDs
 
   // Mixing Functions
 
@@ -135,6 +136,8 @@ private:
   void GenerateMCOpDetLowGainScaleMap(std::vector<raw::OpDetWaveform> const&);
   std::unordered_map<raw::Channel_t,float> fMCOpDetLowGainScaleMap;
 
+  std::unique_ptr< std::vector<EventMixingSummary> > fEventMixingSummary;
+  
 };
 
 
@@ -154,7 +157,8 @@ mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::Param
   fOpDetMCModuleLabel(fpset.get<std::string>("OpDetMCModuleLabel")),
   fEventsToMix(fpset.get<size_t>("EventsToMix",1)),
   fDefaultMCRawDigitScale(fpset.get<float>("DefaultMCRawDigitScale",1)),
-  fDefaultMCOpDetScale(fpset.get<float>("DefaultMCOpDetScale",1))
+  fDefaultMCOpDetScale(fpset.get<float>("DefaultMCOpDetScale",1)),
+  fEventMixingSummary(nullptr)
 {
   
   if(fEventsToMix!=1){
@@ -181,9 +185,6 @@ mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::Param
     fDoMCReco = fpset.get_if_present<std::string>("MCRecoInputModuleLabel",fMCRecoInputModuleLabel);
     fG4InputModuleLabel = fpset.get<std::string>("G4InputModuleLabel");
     fGeneratorInputModuleLabel = fpset.get<std::string>("GeneratorInputModuleLabel");
-
-    //If it produces something on its own, declare it here
-    //helper.produces<>();
     
     //MC generator info is a simple copy
     helper.declareMixOp( art::InputTag(fGeneratorInputModuleLabel),
@@ -233,6 +234,8 @@ mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::Param
 		       &OverlayRawDataDetailMicroBooNE::MixOpDetWaveforms_LowGain,
 		       *this );
 
+  //If it produces something on its own, declare it here
+  helper.produces< std::vector<mix::EventMixingSummary> >();
 }
 
 //Initialize for each event
@@ -253,11 +256,21 @@ void mix::OverlayRawDataDetailMicroBooNE::startEvent(const art::Event& event) {
 
   fODMixer.SetSaturationPoint(fDefaultOpDetSatPoint);
   fODMixer.SetMinSampleSize(fOpDetMinSampleSize);
+
+
+  fEventMixingSummary.reset(new std::vector<mix::EventMixingSummary>);
 }
+
+//For each of the mixed in events...bookkepping for event IDs
+void mix::OverlayRawDataDetailMicroBooNE::processEventIDs(art::EventIDSequence const& seq){
+  for (auto const& id : seq)
+    fEventMixingSummary->emplace_back(id.event(),id.subRun(),id.run());
+}
+
 
 //End each event
 void mix::OverlayRawDataDetailMicroBooNE::finalizeEvent(art::Event& event) {
-  //Nothing to be done?
+  event.put(std::move(fEventMixingSummary));
 }
 
 template<typename T>

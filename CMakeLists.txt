@@ -51,6 +51,7 @@ include(ArtMake)
 include(BuildPlugins)
 
 # ADD SOURCE CODE SUBDIRECTORIES HERE
+add_subdirectory(DataOverlayProducts)
 add_subdirectory(DataOverlay)
 add_subdirectory(DataOverlayMixer)
 
