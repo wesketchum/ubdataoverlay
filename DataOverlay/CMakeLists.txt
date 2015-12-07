@@ -21,5 +21,14 @@ art_make_library( LIBRARY_NAME  ub_RawDigitMixer
 		RawData
 		${ROOT_BASIC_LIB_LIST}
 )
- install_headers()
+
+art_make_library( LIBRARY_NAME  ub_OpDetWaveformMixer
+	SOURCE OpDetWaveformMixer.cxx
+	LIBRARIES
+		ub_RawDigitAdder
+		RawData
+		${ROOT_BASIC_LIB_LIST}
+)
+
+install_headers()
 install_source()

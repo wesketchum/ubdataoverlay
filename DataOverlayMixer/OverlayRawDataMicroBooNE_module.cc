@@ -43,6 +43,9 @@
 #include "RawData/RawDigit.h"
 #include "SimpleTypesAndConstants/RawTypes.h"
 
+#include "DataOverlay/OpDetWaveformMixer.h"
+#include "RawData/OpDetWaveform.h"
+
 
 namespace mix {
   class OverlayRawDataDetailMicroBooNE;
@@ -77,12 +80,10 @@ public:
   bool MixRawDigits( std::vector< std::vector<raw::RawDigit> const* > const& inputs,
   		     std::vector<raw::RawDigit> & output,
   		     art::PtrRemapper const &);
-  /*
-  //TODO: OpDetWaveform
-  bool MixOpDetWaveform( std::vector< std::vector<raw::OpDetWaveform> const* > const& inputs,
-                         std::vector<raw::OpDetWaveform> & output,
-			 art::PtrRemapper const &);
-  */
+  
+  bool MixOpDetWaveforms( std::vector< std::vector<raw::OpDetWaveform> const* > const& inputs,
+			  std::vector<raw::OpDetWaveform> & output,
+			  art::PtrRemapper const &);
 
 		   
   
@@ -90,22 +91,30 @@ private:
 
   // Declare member data here.
   RawDigitMixer              fRDMixer;
+  OpDetWaveformMixer         fODMixer;
   
   fhicl::ParameterSet  fpset;
   short                fDefaultRawDigitSatPoint;
+  short                fDefaultOpDetSatPoint;
   bool                 fInputFileIsData;
   std::string          fRawDigitInputModuleLabel;
+  std::string          fOpDetInputModuleLabel;
   std::string          fG4InputModuleLabel;
   std::string          fGeneratorInputModuleLabel;
   bool                 fDoMCReco;
   std::string          fMCRecoInputModuleLabel;
   size_t               fEventsToMix;
-  float                fDefaultMCScale;
+  float                fDefaultMCRawDigitScale;
+  float                fDefaultMCOpDetScale;
   
   art::Handle< std::vector<raw::RawDigit> > inputDigitHandle;
+  art::Handle< std::vector<raw::OpDetWaveform> > inputOpDetHandle;
 
-  void GenerateMCScaleMap(std::vector<raw::RawDigit> const&);
-  std::unordered_map<raw::ChannelID_t,float> fMCScaleMap;
+  void GenerateMCRawDigitScaleMap(std::vector<raw::RawDigit> const&);
+  std::unordered_map<raw::ChannelID_t,float> fMCRawDigitScaleMap;
+
+  void GenerateMCOpDetScaleMap(std::vector<raw::OpDetWaveform> const&);
+  std::unordered_map<raw::Channel_t,float> fMCOpDetScaleMap;
 };
 
 
@@ -113,12 +122,16 @@ mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::Param
 								    art::MixHelper &helper)
   :
   fRDMixer(false), //print warnings turned off
+  fODMixer(false), //print warnings turned off
   fpset(p.get<fhicl::ParameterSet>("detail")),
   fDefaultRawDigitSatPoint(fpset.get<short>("DefaultRawDigitSaturationPoint",4096)),
+  fDefaultOpDetSatPoint(fpset.get<short>("DefaultOpDetSaturationPoint",4096)),
   fInputFileIsData(fpset.get<bool>("InputFileIsData")),
   fRawDigitInputModuleLabel(fpset.get<std::string>("RawDigitInputModuleLabel")),
+  fOpDetInputModuleLabel(fpset.get<std::string>("OpDetInputModuleLabel")),
   fEventsToMix(fpset.get<size_t>("EventsToMix",1)),
-  fDefaultMCScale(fpset.get<float>("DefaultMCScale",1))
+  fDefaultMCRawDigitScale(fpset.get<float>("DefaultMCRawDigitScale",1)),
+  fDefaultMCOpDetScale(fpset.get<float>("DefaultMCOpDetScale",1))
 {
   
   if(fEventsToMix!=1){
@@ -161,6 +174,7 @@ mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::Param
 		       < art::Assns<simb::MCTruth,simb::MCParticle,void> >,
 		       *this );
 		       */
+    
     //Copies of MCShower and MCTrack
     if(fDoMCReco){
       helper.declareMixOp( art::InputTag(fMCRecoInputModuleLabel),
@@ -170,7 +184,7 @@ mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::Param
 			   &OverlayRawDataDetailMicroBooNE::MixSimpleCopy<sim::MCTrack>,
 			   *this );
     }
-  }
+  }//end if file is input data
   
   helper.declareMixOp( art::InputTag(fRawDigitInputModuleLabel),
   		       &OverlayRawDataDetailMicroBooNE::MixRawDigits,
@@ -182,21 +196,16 @@ void mix::OverlayRawDataDetailMicroBooNE::startEvent(const art::Event& event) {
 
   event.getByLabel(fRawDigitInputModuleLabel,inputDigitHandle);
   if(!inputDigitHandle.isValid()) throw std::exception();
-  
   fRDMixer.SetSaturationPoint(fDefaultRawDigitSatPoint);
+
+  event.getByLabel(fOpDetInputModuleLabel,"OpdetBeamHighGain",inputOpDetHandle);
+  if(!inputOpDetHandle.isValid()) throw std::exception();
+  fODMixer.SetSaturationPoint(fDefaultOpDetSatPoint);
 }
 
 //End each event
 void mix::OverlayRawDataDetailMicroBooNE::finalizeEvent(art::Event& event) {
   //Nothing to be done?
-}
-
-void mix::OverlayRawDataDetailMicroBooNE::GenerateMCScaleMap(std::vector<raw::RawDigit> const& dataDigitVector){
-  //right now, assume the number of channels is the number in the collection
-  //and, loop through the channels one by one to get the right channel number
-  //note: we will put here access to the channel database to determine dead channels
-  for(auto const& d : dataDigitVector)
-    fMCScaleMap[d.Channel()] = fDefaultMCScale;
 }
 
 template<typename T>
@@ -205,6 +214,15 @@ bool mix::OverlayRawDataDetailMicroBooNE::MixSimpleCopy( std::vector< std::vecto
 							 art::PtrRemapper const &){
   art::flattenCollections(inputs,output);
   return true;
+}
+
+void mix::OverlayRawDataDetailMicroBooNE::GenerateMCRawDigitScaleMap(std::vector<raw::RawDigit> const& dataDigitVector){
+  //right now, assume the number of channels is the number in the collection
+  //and, loop through the channels one by one to get the right channel number
+  //note: we will put here access to the channel database to determine dead channels
+  fMCRawDigitScaleMap.clear();
+  for(auto const& d : dataDigitVector)
+    fMCRawDigitScaleMap[d.Channel()] = fDefaultMCRawDigitScale;
 }
 
 bool mix::OverlayRawDataDetailMicroBooNE::MixRawDigits( std::vector< std::vector<raw::RawDigit> const* > const& inputs,
@@ -220,18 +238,54 @@ bool mix::OverlayRawDataDetailMicroBooNE::MixRawDigits( std::vector< std::vector
 
 
   if(fInputFileIsData){
-    GenerateMCScaleMap(*inputDigitHandle);  
+    GenerateMCRawDigitScaleMap(*inputDigitHandle);  
     fRDMixer.DeclareData(*inputDigitHandle);
     for(auto const& icol : inputs)
-      fRDMixer.Mix(*icol,fMCScaleMap);
+      fRDMixer.Mix(*icol,fMCRawDigitScaleMap);
   }
   else if(!fInputFileIsData){
-    GenerateMCScaleMap(*(inputs[0]));  
+    GenerateMCRawDigitScaleMap(*(inputs[0]));  
     fRDMixer.DeclareData(*(inputs[0]));
-    fRDMixer.Mix(*inputDigitHandle,fMCScaleMap);
+    fRDMixer.Mix(*inputDigitHandle,fMCRawDigitScaleMap);
   }
   
   fRDMixer.FillRawDigitOutput(output);
+  
+  return true;
+}
+
+void mix::OverlayRawDataDetailMicroBooNE::GenerateMCOpDetScaleMap(std::vector<raw::OpDetWaveform> const& dataVector){
+  //right now, assume the number of channels is the number in the collection
+  //and, loop through the channels one by one to get the right channel number
+  //note: we will put here access to the channel database to determine dead channels
+  fMCOpDetScaleMap.clear();
+  for(auto const& d : dataVector)
+    fMCOpDetScaleMap[d.ChannelNumber()] = fDefaultMCOpDetScale;
+}
+
+bool mix::OverlayRawDataDetailMicroBooNE::MixOpDetWaveforms( std::vector< std::vector<raw::OpDetWaveform> const* > const& inputs,
+							     std::vector<raw::OpDetWaveform> & output,
+							     art::PtrRemapper const & remap) {
+  
+  //make sure we only have two collections for now
+  if(inputs.size()!=fEventsToMix || (inputs.size()!=1 && !fInputFileIsData)){
+    std::stringstream err_str;
+    err_str << "ERROR! We have the wrong number of collections of raw digits we are adding! " << inputs.size();
+    throw std::runtime_error(err_str.str());
+  }
+
+
+  if(fInputFileIsData){
+    GenerateMCOpDetScaleMap(*inputOpDetHandle);  
+    fODMixer.DeclareData(*inputOpDetHandle,output);
+    for(auto const& icol : inputs)
+      fODMixer.Mix(*icol,fMCOpDetScaleMap,output);
+  }
+  else if(!fInputFileIsData){
+    GenerateMCOpDetScaleMap(*(inputs[0]));  
+    fODMixer.DeclareData(*(inputs[0]),output);
+    fODMixer.Mix(*inputOpDetHandle,fMCOpDetScaleMap,output);
+  }
   
   return true;
 }

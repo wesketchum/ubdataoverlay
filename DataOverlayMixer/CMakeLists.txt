@@ -7,6 +7,7 @@ art_make( BASENAME_ONLY
 			MCBase
 			ub_RawDigitAdderAna
 			ub_RawDigitMixer
+			ub_OpDetWaveformMixer
                         RawData
                         ${ART_FRAMEWORK_CORE}
 			${ART_FRAMEWORK_IO_SOURCES}
