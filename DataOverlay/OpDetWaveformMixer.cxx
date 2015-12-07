@@ -47,7 +47,7 @@ void mix::OpDetWaveformMixer::Mix(std::vector<raw::OpDetWaveform> const& mcVecto
 
     size_t i_output = it_ch->second;
 
-    fRDAdderAlg.SetPedestalInputs(0.0,0.0);
+    fRDAdderAlg.SetPedestalInputs(2048,0.0); //HARDCODED PEDESTAL AT 2048!!!!!!!
     fRDAdderAlg.SetScaleInputs(scale_map.at(od.ChannelNumber()),1.0);
     
     //If the sizes are not the same...
