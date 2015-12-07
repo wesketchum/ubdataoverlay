@@ -5,10 +5,12 @@
 #include <limits>
 #include <iostream>
 #include <stdexcept>
+#include <algorithm>
 
 
 void mix::RawDigitMixer::DeclareData(std::vector<raw::RawDigit> const& dataVector){
 
+  fChannelIndexMap.clear();
   fOutputWaveforms.resize(dataVector.size());
 
   for(size_t i_rd=0; i_rd<dataVector.size(); i_rd++){
@@ -69,7 +71,7 @@ void mix::RawDigitMixer::Mix(std::vector<raw::RawDigit> const& mcVector,
       //if the samples is shorter, pad it out with the pedestal
       else if(rd.Samples() < fOutputWaveforms[i_output].waveform.size()){
 	std::vector<short> mc_trimmed(fOutputWaveforms[i_output].waveform.size(),rd.GetPedestal());
-	mc_trimmed.insert(mc_trimmed.begin(),rd.ADCs().begin(),rd.ADCs().end());
+	std::copy(rd.ADCs().begin(),rd.ADCs().end(),mc_trimmed.begin());
 	fRDAdderAlg.AddRawDigits(mc_trimmed,fOutputWaveforms[i_output].waveform);
       }
     }

@@ -49,6 +49,9 @@ public:
   void SetSaturationPoint(short x)
   { fRDAdderAlg.SetSaturationPoint(x); }
   
+  void SetMinSampleSize(size_t x)
+  { fMinSampleSize = x; }
+
   /// Default destructor
   virtual ~OpDetWaveformMixer(){};
   
@@ -61,6 +64,8 @@ public:
   
   RawDigitAdder_HardSaturate fRDAdderAlg;
 
+  size_t fMinSampleSize;
+  
 };
 
 #endif

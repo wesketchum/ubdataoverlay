@@ -96,6 +96,7 @@ private:
   fhicl::ParameterSet  fpset;
   short                fDefaultRawDigitSatPoint;
   short                fDefaultOpDetSatPoint;
+  size_t               fOpDetMinSampleSize;
   bool                 fInputFileIsData;
 
   std::string          fRawDigitDataModuleLabel;
@@ -133,10 +134,11 @@ mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::Param
 								    art::MixHelper &helper)
   :
   fRDMixer(false), //print warnings turned off
-  fODMixer(true), //print warnings turned off
+  fODMixer(false), //print warnings turned off
   fpset(p.get<fhicl::ParameterSet>("detail")),
   fDefaultRawDigitSatPoint(fpset.get<short>("DefaultRawDigitSaturationPoint",4096)),
   fDefaultOpDetSatPoint(fpset.get<short>("DefaultOpDetSaturationPoint",4096)),
+  fOpDetMinSampleSize(fpset.get<size_t>("OpDetMinSampleSize",100)),
   fInputFileIsData(fpset.get<bool>("InputFileIsData")),
   fRawDigitDataModuleLabel(fpset.get<std::string>("RawDigitDataModuleLabel")),
   fOpDetDataModuleLabel(fpset.get<std::string>("OpDetMCModuleLabel")),
@@ -234,6 +236,7 @@ void mix::OverlayRawDataDetailMicroBooNE::startEvent(const art::Event& event) {
   if(!inputOpDetHandle.isValid())
     throw cet::exception("OverlayRawDataMicroBooNE") << "Bad input opdet handle." << std::endl;;
   fODMixer.SetSaturationPoint(fDefaultOpDetSatPoint);
+  fODMixer.SetMinSampleSize(fOpDetMinSampleSize);
 }
 
 //End each event
