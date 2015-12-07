@@ -97,12 +97,23 @@ private:
   short                fDefaultRawDigitSatPoint;
   short                fDefaultOpDetSatPoint;
   bool                 fInputFileIsData;
-  std::string          fRawDigitInputModuleLabel;
-  std::string          fOpDetInputModuleLabel;
+
+  std::string          fRawDigitDataModuleLabel;
+  std::string          fOpDetDataModuleLabel;
+  std::string          fRawDigitMCModuleLabel;
+  std::string          fOpDetMCModuleLabel;
+
+  std::string          fRawDigitInputSourceModuleLabel;
+  std::string          fOpDetInputSourceModuleLabel;
+  std::string          fRawDigitMixerSourceModuleLabel;
+  std::string          fOpDetMixerSourceModuleLabel;
+
   std::string          fG4InputModuleLabel;
   std::string          fGeneratorInputModuleLabel;
+
   bool                 fDoMCReco;
   std::string          fMCRecoInputModuleLabel;
+
   size_t               fEventsToMix;
   float                fDefaultMCRawDigitScale;
   float                fDefaultMCOpDetScale;
@@ -122,13 +133,15 @@ mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::Param
 								    art::MixHelper &helper)
   :
   fRDMixer(false), //print warnings turned off
-  fODMixer(false), //print warnings turned off
+  fODMixer(true), //print warnings turned off
   fpset(p.get<fhicl::ParameterSet>("detail")),
   fDefaultRawDigitSatPoint(fpset.get<short>("DefaultRawDigitSaturationPoint",4096)),
   fDefaultOpDetSatPoint(fpset.get<short>("DefaultOpDetSaturationPoint",4096)),
   fInputFileIsData(fpset.get<bool>("InputFileIsData")),
-  fRawDigitInputModuleLabel(fpset.get<std::string>("RawDigitInputModuleLabel")),
-  fOpDetInputModuleLabel(fpset.get<std::string>("OpDetInputModuleLabel")),
+  fRawDigitDataModuleLabel(fpset.get<std::string>("RawDigitDataModuleLabel")),
+  fOpDetDataModuleLabel(fpset.get<std::string>("OpDetMCModuleLabel")),
+  fRawDigitMCModuleLabel(fpset.get<std::string>("RawDigitDataModuleLabel")),
+  fOpDetMCModuleLabel(fpset.get<std::string>("OpDetMCModuleLabel")),
   fEventsToMix(fpset.get<size_t>("EventsToMix",1)),
   fDefaultMCRawDigitScale(fpset.get<float>("DefaultMCRawDigitScale",1)),
   fDefaultMCOpDetScale(fpset.get<float>("DefaultMCOpDetScale",1))
@@ -138,9 +151,22 @@ mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::Param
     std::stringstream err_str;
     err_str << "ERROR! Really sorry, but we can only do mixing for one collection right now! ";
     err_str << "\nYep. We're gonna throw an exception now. You should change your fcl to set 'EventsToMix' to 1";
-    throw std::runtime_error(err_str.str());
+    throw cet::exception("OverlayRawDataMicroBooNE") << err_str.str() << std::endl;;
   }
 
+  if(fInputFileIsData){
+    fRawDigitInputSourceModuleLabel = fRawDigitDataModuleLabel;
+    fOpDetInputSourceModuleLabel    = fOpDetDataModuleLabel;
+    fRawDigitMixerSourceModuleLabel = fRawDigitMCModuleLabel;
+    fOpDetMixerSourceModuleLabel    = fOpDetMCModuleLabel;
+  }
+  else if(!fInputFileIsData){
+    fRawDigitInputSourceModuleLabel = fRawDigitMCModuleLabel;
+    fOpDetInputSourceModuleLabel    = fOpDetMCModuleLabel;
+    fRawDigitMixerSourceModuleLabel = fRawDigitDataModuleLabel;
+    fOpDetMixerSourceModuleLabel    = fOpDetDataModuleLabel;
+  }
+  
   if(fInputFileIsData){
     fDoMCReco = fpset.get_if_present<std::string>("MCRecoInputModuleLabel",fMCRecoInputModuleLabel);
     fG4InputModuleLabel = fpset.get<std::string>("G4InputModuleLabel");
@@ -185,21 +211,28 @@ mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::Param
 			   *this );
     }
   }//end if file is input data
+
+  helper.declareMixOp( art::InputTag(fRawDigitMixerSourceModuleLabel),
+		       &OverlayRawDataDetailMicroBooNE::MixRawDigits,
+		       *this );
   
-  helper.declareMixOp( art::InputTag(fRawDigitInputModuleLabel),
-  		       &OverlayRawDataDetailMicroBooNE::MixRawDigits,
-  		       *this );
+  helper.declareMixOp( art::InputTag(fOpDetMixerSourceModuleLabel,"OpdetBeamHighGain"),
+		       &OverlayRawDataDetailMicroBooNE::MixOpDetWaveforms,
+		       *this );
+
 }
 
 //Initialize for each event
 void mix::OverlayRawDataDetailMicroBooNE::startEvent(const art::Event& event) {
 
-  event.getByLabel(fRawDigitInputModuleLabel,inputDigitHandle);
-  if(!inputDigitHandle.isValid()) throw std::exception();
+  event.getByLabel(fRawDigitInputSourceModuleLabel,inputDigitHandle);
+  if(!inputDigitHandle.isValid())
+    throw cet::exception("OverlayRawDataMicroBooNE") << "Bad input digit handle." << std::endl;;
   fRDMixer.SetSaturationPoint(fDefaultRawDigitSatPoint);
 
-  event.getByLabel(fOpDetInputModuleLabel,"OpdetBeamHighGain",inputOpDetHandle);
-  if(!inputOpDetHandle.isValid()) throw std::exception();
+  event.getByLabel(fOpDetInputSourceModuleLabel,"OpdetBeamHighGain",inputOpDetHandle);
+  if(!inputOpDetHandle.isValid())
+    throw cet::exception("OverlayRawDataMicroBooNE") << "Bad input opdet handle." << std::endl;;
   fODMixer.SetSaturationPoint(fDefaultOpDetSatPoint);
 }
 

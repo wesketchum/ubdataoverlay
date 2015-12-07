@@ -12,9 +12,17 @@ void mix::OpDetWaveformMixer::DeclareData(std::vector<raw::OpDetWaveform> const&
 
   outputVector.reserve(dataVector.size());
 
-  for(size_t i_od=0; i_od<dataVector.size(); i_od++){
-    fChannelIndexMap[dataVector[i_od].ChannelNumber()] = i_od;
-    outputVector.emplace_back(dataVector[i_od]);
+  for(auto const& od : dataVector){
+  
+    auto my_channel = fChannelIndexMap.find(od.ChannelNumber());
+    if(my_channel != fChannelIndexMap.end() && outputVector[my_channel->second].size() > od.size())
+      continue;
+
+    fChannelIndexMap[od.ChannelNumber()] = outputVector.size();
+    outputVector.emplace_back(od);
+
+    std::cout << "\tAdded channel " << outputVector.back().ChannelNumber()
+	      << " with size " << outputVector.back().size() << " to the output." << std::endl;
   }
   
 }
@@ -26,6 +34,8 @@ void mix::OpDetWaveformMixer::Mix(std::vector<raw::OpDetWaveform> const& mcVecto
 
   for( auto const& od : mcVector){
 
+    std::cout << "\tSize of waveform in channel " << od.ChannelNumber() << " at time " << od.TimeStamp() << " is " << od.size() << std::endl;
+    
     auto it_ch = fChannelIndexMap.find(od.ChannelNumber());
 
     //if this channel is not in the data, skip this channel!
@@ -39,29 +49,16 @@ void mix::OpDetWaveformMixer::Mix(std::vector<raw::OpDetWaveform> const& mcVecto
     
     //If the sizes are not the same...
     if(od.size() != outputVector[i_output].size()){
-      if(_printWarnings)
+      if(_printWarnings && od.size()>100)
 	std::cout << "WARNING! Two collections don't have same number of samples:\t"
 		  << outputVector[i_output].size() << " " << od.size() << std::endl;
-      throw std::runtime_error("BADBADBADBADBAD");
-      /*
-      //if the samples is larger, we make a new vector of the right size, trimmed down appropriately
-      if(rd.Samples() > fOutputWaveforms[i_output].waveform.size()){
-	std::vector<short> const& mc_trimmed = std::vector<short>(rd.ADCs().begin(),
-								  rd.ADCs().begin()+fOutputWaveforms[i_output].waveform.size());
-	fRDAdderAlg.AddRawDigits(mc_trimmed,fOutputWaveforms[i_output].waveform);
-      }
-      //if the samples is shorter, pad it out with the pedestal
-      else if(rd.Samples() < fOutputWaveforms[i_output].waveform.size()){
-	std::vector<short> mc_trimmed(fOutputWaveforms[i_output].waveform.size(),rd.GetPedestal());
-	mc_trimmed.insert(mc_trimmed.begin(),rd.ADCs().begin(),rd.ADCs().end());
-	fRDAdderAlg.AddRawDigits(mc_trimmed,fOutputWaveforms[i_output].waveform);
-      }
-      */
+      //throw std::runtime_error("BADBADBADBADBAD");
+      continue;
     }
-    //Sizes are the same? Easy!
-    //else{
+
+    std::cout << "\t\tWaveform size for channel " << od.ChannelNumber() << " is " << od.size() << std::endl;
+    
     fRDAdderAlg.AddRawDigits(od,outputVector[i_output]);
-    //}
       
   }
 
