@@ -81,9 +81,12 @@ public:
   		     std::vector<raw::RawDigit> & output,
   		     art::PtrRemapper const &);
   
-  bool MixOpDetWaveforms( std::vector< std::vector<raw::OpDetWaveform> const* > const& inputs,
-			  std::vector<raw::OpDetWaveform> & output,
-			  art::PtrRemapper const &);
+  bool MixOpDetWaveforms_HighGain( std::vector< std::vector<raw::OpDetWaveform> const* > const& inputs,
+				   std::vector<raw::OpDetWaveform> & output,
+				   art::PtrRemapper const &);
+  bool MixOpDetWaveforms_LowGain( std::vector< std::vector<raw::OpDetWaveform> const* > const& inputs,
+				  std::vector<raw::OpDetWaveform> & output,
+				  art::PtrRemapper const &);
 
 		   
   
@@ -120,13 +123,18 @@ private:
   float                fDefaultMCOpDetScale;
   
   art::Handle< std::vector<raw::RawDigit> > inputDigitHandle;
-  art::Handle< std::vector<raw::OpDetWaveform> > inputOpDetHandle;
+  art::Handle< std::vector<raw::OpDetWaveform> > inputOpDetHandle_HighGain;
+  art::Handle< std::vector<raw::OpDetWaveform> > inputOpDetHandle_LowGain;
 
   void GenerateMCRawDigitScaleMap(std::vector<raw::RawDigit> const&);
   std::unordered_map<raw::ChannelID_t,float> fMCRawDigitScaleMap;
 
-  void GenerateMCOpDetScaleMap(std::vector<raw::OpDetWaveform> const&);
-  std::unordered_map<raw::Channel_t,float> fMCOpDetScaleMap;
+  void GenerateMCOpDetHighGainScaleMap(std::vector<raw::OpDetWaveform> const&);
+  std::unordered_map<raw::Channel_t,float> fMCOpDetHighGainScaleMap;
+
+  void GenerateMCOpDetLowGainScaleMap(std::vector<raw::OpDetWaveform> const&);
+  std::unordered_map<raw::Channel_t,float> fMCOpDetLowGainScaleMap;
+
 };
 
 
@@ -219,7 +227,10 @@ mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::Param
 		       *this );
   
   helper.declareMixOp( art::InputTag(fOpDetMixerSourceModuleLabel,"OpdetBeamHighGain"),
-		       &OverlayRawDataDetailMicroBooNE::MixOpDetWaveforms,
+		       &OverlayRawDataDetailMicroBooNE::MixOpDetWaveforms_HighGain,
+		       *this );
+  helper.declareMixOp( art::InputTag(fOpDetMixerSourceModuleLabel,"OpdetBeamLowGain"),
+		       &OverlayRawDataDetailMicroBooNE::MixOpDetWaveforms_LowGain,
 		       *this );
 
 }
@@ -232,9 +243,14 @@ void mix::OverlayRawDataDetailMicroBooNE::startEvent(const art::Event& event) {
     throw cet::exception("OverlayRawDataMicroBooNE") << "Bad input digit handle." << std::endl;;
   fRDMixer.SetSaturationPoint(fDefaultRawDigitSatPoint);
 
-  event.getByLabel(fOpDetInputSourceModuleLabel,"OpdetBeamHighGain",inputOpDetHandle);
-  if(!inputOpDetHandle.isValid())
-    throw cet::exception("OverlayRawDataMicroBooNE") << "Bad input opdet handle." << std::endl;;
+  event.getByLabel(fOpDetInputSourceModuleLabel,"OpdetBeamLowGain",inputOpDetHandle_LowGain);
+  if(!inputOpDetHandle_LowGain.isValid())
+    throw cet::exception("OverlayRawDataMicroBooNE") << "Bad input opdet lowgain handle." << std::endl;;
+
+  event.getByLabel(fOpDetInputSourceModuleLabel,"OpdetBeamHighGain",inputOpDetHandle_HighGain);
+  if(!inputOpDetHandle_HighGain.isValid())
+    throw cet::exception("OverlayRawDataMicroBooNE") << "Bad input opdet highgain handle." << std::endl;;
+
   fODMixer.SetSaturationPoint(fDefaultOpDetSatPoint);
   fODMixer.SetMinSampleSize(fOpDetMinSampleSize);
 }
@@ -290,18 +306,27 @@ bool mix::OverlayRawDataDetailMicroBooNE::MixRawDigits( std::vector< std::vector
   return true;
 }
 
-void mix::OverlayRawDataDetailMicroBooNE::GenerateMCOpDetScaleMap(std::vector<raw::OpDetWaveform> const& dataVector){
+void mix::OverlayRawDataDetailMicroBooNE::GenerateMCOpDetHighGainScaleMap(std::vector<raw::OpDetWaveform> const& dataVector){
   //right now, assume the number of channels is the number in the collection
   //and, loop through the channels one by one to get the right channel number
   //note: we will put here access to the channel database to determine dead channels
-  fMCOpDetScaleMap.clear();
+  fMCOpDetHighGainScaleMap.clear();
   for(auto const& d : dataVector)
-    fMCOpDetScaleMap[d.ChannelNumber()] = fDefaultMCOpDetScale;
+    fMCOpDetHighGainScaleMap[d.ChannelNumber()] = fDefaultMCOpDetScale;
 }
 
-bool mix::OverlayRawDataDetailMicroBooNE::MixOpDetWaveforms( std::vector< std::vector<raw::OpDetWaveform> const* > const& inputs,
-							     std::vector<raw::OpDetWaveform> & output,
-							     art::PtrRemapper const & remap) {
+void mix::OverlayRawDataDetailMicroBooNE::GenerateMCOpDetLowGainScaleMap(std::vector<raw::OpDetWaveform> const& dataVector){
+  //right now, assume the number of channels is the number in the collection
+  //and, loop through the channels one by one to get the right channel number
+  //note: we will put here access to the channel database to determine dead channels
+  fMCOpDetLowGainScaleMap.clear();
+  for(auto const& d : dataVector)
+    fMCOpDetLowGainScaleMap[d.ChannelNumber()] = fDefaultMCOpDetScale;
+}
+
+bool mix::OverlayRawDataDetailMicroBooNE::MixOpDetWaveforms_HighGain( std::vector< std::vector<raw::OpDetWaveform> const* > const& inputs,
+								      std::vector<raw::OpDetWaveform> & output,
+								      art::PtrRemapper const & remap) {
   
   //make sure we only have two collections for now
   if(inputs.size()!=fEventsToMix || (inputs.size()!=1 && !fInputFileIsData)){
@@ -312,15 +337,42 @@ bool mix::OverlayRawDataDetailMicroBooNE::MixOpDetWaveforms( std::vector< std::v
 
 
   if(fInputFileIsData){
-    GenerateMCOpDetScaleMap(*inputOpDetHandle);  
-    fODMixer.DeclareData(*inputOpDetHandle,output);
+    GenerateMCOpDetHighGainScaleMap(*inputOpDetHandle_HighGain);  
+    fODMixer.DeclareData(*inputOpDetHandle_HighGain,output);
     for(auto const& icol : inputs)
-      fODMixer.Mix(*icol,fMCOpDetScaleMap,output);
+      fODMixer.Mix(*icol,fMCOpDetHighGainScaleMap,output);
   }
   else if(!fInputFileIsData){
-    GenerateMCOpDetScaleMap(*(inputs[0]));  
+    GenerateMCOpDetHighGainScaleMap(*(inputs[0]));  
     fODMixer.DeclareData(*(inputs[0]),output);
-    fODMixer.Mix(*inputOpDetHandle,fMCOpDetScaleMap,output);
+    fODMixer.Mix(*inputOpDetHandle_HighGain,fMCOpDetHighGainScaleMap,output);
+  }
+  
+  return true;
+}
+
+bool mix::OverlayRawDataDetailMicroBooNE::MixOpDetWaveforms_LowGain( std::vector< std::vector<raw::OpDetWaveform> const* > const& inputs,
+								     std::vector<raw::OpDetWaveform> & output,
+								     art::PtrRemapper const & remap) {
+  
+  //make sure we only have two collections for now
+  if(inputs.size()!=fEventsToMix || (inputs.size()!=1 && !fInputFileIsData)){
+    std::stringstream err_str;
+    err_str << "ERROR! We have the wrong number of collections of raw digits we are adding! " << inputs.size();
+    throw std::runtime_error(err_str.str());
+  }
+
+
+  if(fInputFileIsData){
+    GenerateMCOpDetLowGainScaleMap(*inputOpDetHandle_LowGain);  
+    fODMixer.DeclareData(*inputOpDetHandle_LowGain,output);
+    for(auto const& icol : inputs)
+      fODMixer.Mix(*icol,fMCOpDetLowGainScaleMap,output);
+  }
+  else if(!fInputFileIsData){
+    GenerateMCOpDetLowGainScaleMap(*(inputs[0]));  
+    fODMixer.DeclareData(*(inputs[0]),output);
+    fODMixer.Mix(*inputOpDetHandle_LowGain,fMCOpDetLowGainScaleMap,output);
   }
   
   return true;
