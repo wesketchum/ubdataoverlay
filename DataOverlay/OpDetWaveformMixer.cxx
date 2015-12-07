@@ -16,15 +16,17 @@ void mix::OpDetWaveformMixer::DeclareData(std::vector<raw::OpDetWaveform> const&
 
   for(auto const& od : dataVector){
 
+
+    outputVector.emplace_back(od);
+
     if(od.size() < fMinSampleSize) continue;
     
     //we're going to keep the longest one ... JUST handling beam gate stuff for now
     auto my_channel = fChannelIndexMap.find(od.ChannelNumber());
-    if(my_channel != fChannelIndexMap.end() && outputVector[my_channel->second].size() > od.size())
+    if( my_channel != fChannelIndexMap.end() && outputVector[my_channel->second].size() > od.size())
       continue;
 
-    fChannelIndexMap[od.ChannelNumber()] = outputVector.size();
-    outputVector.emplace_back(od);
+    fChannelIndexMap[od.ChannelNumber()] = outputVector.size()-1;
 
   }
   
