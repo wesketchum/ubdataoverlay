@@ -112,7 +112,7 @@ private:
 mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::ParameterSet const& p,
 								    art::MixHelper &helper)
   :
-  fRDMixer(false),
+  fRDMixer(false), //print warnings turned off
   fpset(p.get<fhicl::ParameterSet>("detail")),
   fDefaultRawDigitSatPoint(fpset.get<short>("DefaultRawDigitSaturationPoint",4096)),
   fInputFileIsData(fpset.get<bool>("InputFileIsData")),
@@ -214,7 +214,7 @@ bool mix::OverlayRawDataDetailMicroBooNE::MixRawDigits( std::vector< std::vector
   //make sure we only have two collections for now
   if(inputs.size()!=fEventsToMix || (inputs.size()!=1 && !fInputFileIsData)){
     std::stringstream err_str;
-    err_str << "ERROR! We have more the wrong number of collections of raw digits we are adding! " << inputs.size();
+    err_str << "ERROR! We have the wrong number of collections of raw digits we are adding! " << inputs.size();
     throw std::runtime_error(err_str.str());
   }
 
