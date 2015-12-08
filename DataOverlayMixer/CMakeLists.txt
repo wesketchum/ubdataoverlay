@@ -2,13 +2,15 @@
 
 art_make( BASENAME_ONLY
 	  MODULE_LIBRARIES
-			SimulationBase
-			Simulation
-			MCBase
 			ub_RawDigitAdderAna
 			ub_RawDigitMixer
 			ub_OpDetWaveformMixer
                         RawData
+			SimulationBase
+			Simulation
+			MCBase
+			CalibrationDBI_IOVData
+			CalibrationDBI_Providers
                         ${ART_FRAMEWORK_CORE}
 			${ART_FRAMEWORK_IO_SOURCES}
 			${ART_FRAMEWORK_IO_PRODUCTMIX}

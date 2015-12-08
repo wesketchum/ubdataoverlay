@@ -29,6 +29,9 @@
 #include <exception>
 #include <sstream>
 
+#include "CalibrationDBI/Interface/IChannelStatusService.h"
+#include "CalibrationDBI/Interface/IChannelStatusProvider.h"
+
 #include "SimulationBase/MCTruth.h"
 #include "SimulationBase/MCParticle.h"
 
@@ -241,6 +244,10 @@ mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::Param
 //Initialize for each event
 void mix::OverlayRawDataDetailMicroBooNE::startEvent(const art::Event& event) {
 
+  if(!( (event.isRealData() && fInputFileIsData) || (!event.isRealData() && !fInputFileIsData)))
+    throw cet::exception("OverlayRawDataMicroBooNE") << "Input file claimed to be data, but it's not." << std::endl;;
+    
+  
   event.getByLabel(fRawDigitInputSourceModuleLabel,inputDigitHandle);
   if(!inputDigitHandle.isValid())
     throw cet::exception("OverlayRawDataMicroBooNE") << "Bad input digit handle." << std::endl;;
@@ -270,6 +277,7 @@ void mix::OverlayRawDataDetailMicroBooNE::processEventIDs(art::EventIDSequence c
 
 //End each event
 void mix::OverlayRawDataDetailMicroBooNE::finalizeEvent(art::Event& event) {
+  std::cout << "About to put data onto event. Size is " << fEventMixingSummary->size() << std::endl;
   event.put(std::move(fEventMixingSummary));
 }
 
@@ -286,8 +294,15 @@ void mix::OverlayRawDataDetailMicroBooNE::GenerateMCRawDigitScaleMap(std::vector
   //and, loop through the channels one by one to get the right channel number
   //note: we will put here access to the channel database to determine dead channels
   fMCRawDigitScaleMap.clear();
-  for(auto const& d : dataDigitVector)
-    fMCRawDigitScaleMap[d.Channel()] = fDefaultMCRawDigitScale;
+
+  const lariov::IChannelStatusProvider& chanStatus = art::ServiceHandle<lariov::IChannelStatusService>()->GetProvider();
+  
+  for(auto const& d : dataDigitVector){
+    if(chanStatus.IsBad(d.Channel()))
+      fMCRawDigitScaleMap[d.Channel()] = 0.0;
+    else
+      fMCRawDigitScaleMap[d.Channel()] = fDefaultMCRawDigitScale;
+  }
 }
 
 bool mix::OverlayRawDataDetailMicroBooNE::MixRawDigits( std::vector< std::vector<raw::RawDigit> const* > const& inputs,
