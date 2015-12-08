@@ -139,7 +139,7 @@ private:
   void GenerateMCOpDetLowGainScaleMap(std::vector<raw::OpDetWaveform> const&);
   std::unordered_map<raw::Channel_t,float> fMCOpDetLowGainScaleMap;
 
-  std::unique_ptr< std::vector<EventMixingSummary> > fEventMixingSummary;
+  std::unique_ptr< std::vector<mix::EventMixingSummary> > fEventMixingSummary;
   
 };
 

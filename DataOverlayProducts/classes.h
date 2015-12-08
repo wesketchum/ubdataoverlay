@@ -18,4 +18,4 @@
 //
 
 template class std::vector<mix::EventMixingSummary>;
-template class art::Wrapper< std::vector<mix::EventMixingSummary>   >;
+template class art::Wrapper< std::vector<mix::EventMixingSummary> >;

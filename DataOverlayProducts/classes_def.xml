@@ -7,11 +7,11 @@
 
 <lcgdict>
 
-  <class name="mix::EventMixingSummary       " ClassVersion="0"           >
+  <class name="mix::EventMixingSummary" ClassVersion="0">
    <version ClassVersion="0" checksum="338019760"/>
   </class>
   
- <class name="std::vector<mix::EventMixingSummary>" />
- <class name="art::Wrapper< std::vector<mix::EventMixingSummary>                     >"/>
+ <class name="std::vector<mix::EventMixingSummary>"/>
+ <class name="art::Wrapper< std::vector<mix::EventMixingSummary> >"/>
  
 </lcgdict>
