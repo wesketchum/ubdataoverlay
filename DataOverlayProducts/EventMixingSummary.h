@@ -8,6 +8,8 @@
 #ifndef DATAOVERLAYPRODUCTS_EVENTMIXINGSUMMARY_H
 #define DATAOVERLAYPRODUCTS_EVENTMIXINGSUMMARY_H
 
+#include <stdint.h>
+
 namespace mix {
 
   //This is just gonna be a stupid copy of the basic
