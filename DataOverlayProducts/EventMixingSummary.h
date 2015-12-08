@@ -16,7 +16,8 @@ namespace mix {
   class EventMixingSummary {
 
   public:
-    EventMixingSummary(){}
+  EventMixingSummary():
+    fEvent(0),fSubrun(0),fRun(0) {}
     
 #ifndef __GCCXML__
   public:
@@ -26,14 +27,12 @@ namespace mix {
 	fEvent  = e;
 	fSubrun = s;
 	fRun    = r;
-      }
-      
-    uint32_t Event()  const { return fEvent; }
-    uint32_t SubRun() const { return fSubrun; }
-    uint32_t Run()    const { return fRun; }
+      }    
+    
+    uint32_t Event()  const ;
+    uint32_t SubRun() const ;
+    uint32_t Run()    const ;
 
-    
-    
 #endif // !__GCCXML__
   private:
     uint32_t fEvent;
@@ -41,6 +40,11 @@ namespace mix {
     uint32_t fRun;
   }; // class EventMixingSummary()
   
+#ifndef __GCCXML__
+  inline uint32_t mix::EventMixingSummary::Event()  const { return fEvent;  }
+  inline uint32_t mix::EventMixingSummary::SubRun() const { return fSubrun; }
+  inline uint32_t mix::EventMixingSummary::Run()    const { return fRun;    }
+#endif // !__GCCXML__
   
 } // namespace mix
 

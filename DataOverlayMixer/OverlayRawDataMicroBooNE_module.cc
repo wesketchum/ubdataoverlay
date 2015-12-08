@@ -245,7 +245,7 @@ mix::OverlayRawDataDetailMicroBooNE::OverlayRawDataDetailMicroBooNE(fhicl::Param
 void mix::OverlayRawDataDetailMicroBooNE::startEvent(const art::Event& event) {
 
   if(!( (event.isRealData() && fInputFileIsData) || (!event.isRealData() && !fInputFileIsData)))
-    throw cet::exception("OverlayRawDataMicroBooNE") << "Input file claimed to be data, but it's not." << std::endl;;
+    throw cet::exception("OverlayRawDataMicroBooNE") << "Input file claimed to be data/not data, but it's not." << std::endl;;
     
   
   event.getByLabel(fRawDigitInputSourceModuleLabel,inputDigitHandle);
