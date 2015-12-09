@@ -277,7 +277,6 @@ void mix::OverlayRawDataDetailMicroBooNE::processEventIDs(art::EventIDSequence c
 
 //End each event
 void mix::OverlayRawDataDetailMicroBooNE::finalizeEvent(art::Event& event) {
-  std::cout << "About to put data onto event. Size is " << fEventMixingSummary->size() << std::endl;
   event.put(std::move(fEventMixingSummary));
 }
 
